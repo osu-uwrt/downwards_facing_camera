@@ -59,14 +59,14 @@ int main()
         }
         else
         {
-            cv::cvtColor(cam_0_im, cam_0_gray, cv::COLOR_RGB2GRAY);
-            cv::cvtColor(cam_1_im, cam_1_gray, cv::COLOR_RGB2GRAY);
-            stereo->compute(cam_0_gray, cam_1_gray, disparity);
-            disparity.convertTo(disparity, CV_32F, 1.0);
-            disparity = (disparity/16.0f - 0.0f) / 16;
-            cv::imshow("disparity", disparity);
-            cv::imshow("Video", cam_0_gray);
-            cv::imshow("Video1", cam_1_gray);
+                // cv::cvtColor(cam_0_im, cam_0_gray, cv::COLOR_RGB2GRAY);
+                // cv::cvtColor(cam_1_im, cam_1_gray, cv::COLOR_RGB2GRAY);
+            // stereo->compute(cam_0_gray, cam_1_gray, disparity);
+            // disparity.convertTo(disparity, CV_32F, 1.0);
+            // disparity = (disparity/16.0f - 0.0f) / 16;
+            // cv::imshow("disparity", disparity);
+            cv::imshow("Video", cam_0_im);
+            cv::imshow("Video1", cam_1_im);
             ch = cv::waitKey(10);
             counter++;
         }

@@ -9,7 +9,5 @@ pkg_check_modules(LIBCAMERA REQUIRED libcamera)
 
 include_directories(${LIBCAMERA_INCLUDE_DIRS} ${OPENCV_INCLUDE_DIRS} include)
 add_executable(runCameras src/main.cpp tools/mySerial.cpp)
-add_executable(calibrateCamera src/calibrateCamera tools/mySerial.cpp)
 
 target_link_libraries(runCameras -llccv ${OpenCV_LIBS})
-target_link_libraries(calibrateCamera -llccv ${OpenCV_LIBS})
