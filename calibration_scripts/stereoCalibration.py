@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import time
 
 from calibrationTools import *
 from serial import Serial
@@ -7,18 +8,27 @@ from picamera2 import Picamera2
 
 def main():
     
+    imageSize = (1200, 720)
+    numPoses = 41
+    
     serialPort = Serial("/dev/ttyAMA0", 450)
     
     camL = Picamera2(0)
     camR = Picamera2(1)
     
-    camL.sensor_modes.append({"format": "RGB888"})
-    camL.sensor_modes.append({"size": (1456, 1088)})
-    camL.sensor_modes.append({"fps": 120})
+    config = camL.create_video_configuration(main={"format": 'RGB888', "size": imageSize})
+    camL.configure(config)
     
-    camR.sensor_modes.append({"format": "RGB888"})
-    camR.sensor_modes.append({"size": (1456, 1088)})
-    camR.sensor_modes.append({"fps": 120})
+    config = camR.create_video_configuration(main={"format": 'RGB888', "size": imageSize})
+    camR.configure(config)
+    
+    # camL.sensor_modes.append({"format": "RGB888"})
+    # camL.sensor_modes.append({"size": imageSize})
+    # camL.sensor_modes.append({"fps": 120})
+    
+    # camR.sensor_modes.append({"format": "RGB888"})
+    # camR.sensor_modes.append({"size": imageSize})
+    # camR.sensor_modes.append({"fps": 120})
     
     camL.start()
     camR.start()
@@ -26,26 +36,35 @@ def main():
     objp = createObjPoints(6, 8)
     
     for i in range(8):
-        serialPort.writelines("\x00".encode())
-        serialPort.flush()
+        serialPort.write("\x00".encode())
+        time.sleep(0.05)
         
     leftCornerList = []
     rightCornerList = []
     objPoints = []
         
     i = 0
-    while i < 24:
+    while i < numPoses:
         print("Capturing image: " + str(i))
+        currentNum = 2
         keyPress = None
-        while keyPress != ord('a'):
-            serialPort.writelines("\x00".encode())
+        # while keyPress != ord('a'):
+        start = time.time()
+        while currentNum > -1:
+            serialPort.write("\x00".encode())
             leftIm = camL.capture_array()
             rightIm = camR.capture_array()
             
             vis = np.concatenate((leftIm, rightIm), axis=1)
-            vis = cv2.cvtColor(vis, cv2.COLOR_BGR2RGB)
+            # vis = cv2.cvtColor(vis, cv2.COLOR_BGR2RGB)
+            vis = cv2.putText(vis, str(currentNum), (0,60), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
+            vis = cv2.putText(vis, f"{i+1}/{numPoses}", (1270, 60), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
+            vis = cv2.resize(vis, (int(vis.shape[1] / 1.75), int(vis.shape[0] / 1.75)))
             cv2.imshow("Stereo Image", vis)
             keyPress = cv2.waitKey(10)
+            if time.time() - start >= 1.0:
+                currentNum -= 1
+                start = time.time()
         leftGray = cv2.cvtColor(leftIm, cv2.COLOR_BGR2GRAY)
         rightGray = cv2.cvtColor(rightIm, cv2.COLOR_BGR2GRAY)
         leftFound, leftCorners = cv2.findChessboardCornersSB(leftGray, (6, 8))
@@ -57,9 +76,12 @@ def main():
             cv2.drawChessboardCorners(leftIm, (6, 8), leftCorners, leftFound)
             cv2.drawChessboardCorners(rightIm, (6, 8), rightCorners, rightFound)
             vis = np.concatenate((leftIm, rightIm), axis=1)
-            vis = cv2.cvtColor(vis, cv2.COLOR_BGR2RGB)
-            cv2.imshow("Stereo Image", vis)
-            cv2.waitKey(0)
+            vis = cv2.resize(vis, (int(vis.shape[1] / 1.75), int(vis.shape[0] / 1.75)))
+            # vis = cv2.cvtColor(vis, cv2.COLOR_BGR2RGB)
+            start = time.time()
+            while time.time() - start < 2:
+                cv2.imshow("Stereo Image", vis)
+                cv2.waitKey(1)
             i += 1
         else:
             if leftFound:
@@ -85,7 +107,7 @@ def main():
     
     
     # This step is performed to transformation between the two cameras and calculate Essential and Fundamenatl matrix
-    retS, camMatL, camDCL, camMatR, camDCR, Rot, Trns, Emat, Fmat = cv2.stereoCalibrate(objPoints, leftCornerList, rightCornerList, camMatL, camDCL, camMatR, camDCR, (1456, 1088), criteria_stereo, flags)
+    retS, camMatL, camDCL, camMatR, camDCR, Rot, Trns, Emat, Fmat = cv2.stereoCalibrate(objPoints, leftCornerList, rightCornerList, camMatL, camDCL, camMatR, camDCR, imageSize, criteria_stereo, flags)
     
     if retS:
         print("Stereo calibrated")
@@ -93,12 +115,12 @@ def main():
         print("Stereo calibration failed")
         SystemExit()
     
-    rect_l, rect_r, proj_mat_l, proj_mat_r, Q, roiL, roiR = cv2.stereoRectify(camMatL, camDCL, camMatR, camDCR, (1456, 1088), Rot, Trns, 1,(0,0))
+    rect_l, rect_r, proj_mat_l, proj_mat_r, Q, roiL, roiR = cv2.stereoRectify(camMatL, camDCL, camMatR, camDCR, imageSize, Rot, Trns, 1,(0,0))
     
     Left_Stereo_Map = cv2.initUndistortRectifyMap(camMatL, camDCL, rect_l, proj_mat_l,
-                                             (1456, 1088), cv2.CV_16SC2)
+                                             imageSize, cv2.CV_16SC2)
     Right_Stereo_Map = cv2.initUndistortRectifyMap(camMatR, camDCR, rect_r, proj_mat_r,
-                                                (1456, 1088), cv2.CV_16SC2)
+                                                imageSize, cv2.CV_16SC2)
     
     print("Saving parameters ......")
     cv_file = cv2.FileStorage("/home/pi/StereoMaps.xml", cv2.FILE_STORAGE_WRITE)
