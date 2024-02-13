@@ -7,6 +7,8 @@ from serial import Serial
 from calibrationTools import *
 
 def main():
+    
+    imageSize = (640, 360)
 
     serialPort = Serial("/dev/ttyAMA0", 450)
 
@@ -27,7 +29,7 @@ def main():
         print("No camera specified, defaulting to 0")
     
     # camera.sensor_modes.append({"size": (640, 640), "fps": 1})
-    config = camera.create_video_configuration(main={"format": 'RGB888', "size": (1200, 720)})
+    config = camera.create_video_configuration(main={"format": 'RGB888', "size": imageSize})
     camera.configure(config)
     # print(camera.sensor_modes)
     # camera.sensor_modes.append({"format": "RGB888"})
@@ -53,7 +55,7 @@ def main():
 
     objp = createObjPoints(6, 8)
     cv2.namedWindow("Feed", cv2.WINDOW_NORMAL)
-    # cv2.resizeWindow("Feed", 920, 920)
+    cv2.resizeWindow("Feed", imageSize)
     
 
     while i < 39:
@@ -68,7 +70,7 @@ def main():
             image = camera.capture_array()
             # displayIm = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
             displayIm = cv2.putText(image, str(currentNum), (0,60), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
-            displayIm = cv2.putText(displayIm, f"{i+1}/39", (1270, 60), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
+            displayIm = cv2.putText(displayIm, f"{i+1}/39", (imageSize[0] - 200, 60), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
             # print(displayIm.shape)
             cv2.imshow("Feed", displayIm)
             keyPress = cv2.waitKey(10)

@@ -8,7 +8,7 @@ from picamera2 import Picamera2
 
 def main():
     
-    imageSize = (1200, 720)
+    imageSize = (640, 360)
     numPoses = 41
     
     serialPort = Serial("/dev/ttyAMA0", 450)
@@ -58,7 +58,7 @@ def main():
             vis = np.concatenate((leftIm, rightIm), axis=1)
             # vis = cv2.cvtColor(vis, cv2.COLOR_BGR2RGB)
             vis = cv2.putText(vis, str(currentNum), (0,60), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
-            vis = cv2.putText(vis, f"{i+1}/{numPoses}", (1270, 60), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
+            vis = cv2.putText(vis, f"{i+1}/{numPoses}", (imageSize[0] - 200, 60), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
             vis = cv2.resize(vis, (int(vis.shape[1] / 1.75), int(vis.shape[0] / 1.75)))
             cv2.imshow("Stereo Image", vis)
             keyPress = cv2.waitKey(10)
