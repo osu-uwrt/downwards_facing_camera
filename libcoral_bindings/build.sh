@@ -19,4 +19,4 @@ fi
 docker run --rm -it -v "$(pwd):/workspace" "$DOCKER_IMAGE_NAME" /bin/bash \
     /workspace/docker/docker_compile.sh "$TARGET_NAME" "$(id -u):$(id -g)"
 
-scp out/testYolo pi@100.104.149.25:/home/pi/camSW
+scp out/testYolo pi@raspberrypi.local:/home/pi/camSW

@@ -10,6 +10,6 @@ model = YOLO('yolov8n-seg.pt')
 
 # model.export(format="onnx")
 
-ret = model(image, conf=0.8)
+ret = model(image, conf=0.1)
 
 # print(len(ret))
