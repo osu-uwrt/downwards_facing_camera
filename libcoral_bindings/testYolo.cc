@@ -5,6 +5,8 @@
 #include "coral/tflite_utils.h"
 #include "tensorflow/lite/interpreter.h"
 
+#include "coral_yolo.hpp"
+
 std::vector<uint8_t> decode_bmp(const uint8_t* input, int row_size, int width,
                                 int height, int channels, bool top_down) {
     std::vector<uint8_t> output(height * width * channels);
@@ -89,13 +91,7 @@ std::vector<uint8_t> read_bmp(const std::string& input_bmp_name, int* width,
                       top_down);
 }
 
-struct Detection {
-    int classId;
-    float conf;
-    float bbox[4];
-};
-
-class CoralYolo {
+class CoralYolo: public CoralYoloItf {
    public:
     std::string model_path_;
     int num_classes_;
@@ -159,7 +155,7 @@ class CoralYolo {
 
     void preprocessImage(uint8_t* image) {
         for (int i = 0; i < 1228800; i++) {
-            input[i] = ((float)image[i] / (float) 255) / inputScale + inputZeroPoint;
+            input[i] = (int8_t) (((float)image[i] / (float) 255) / inputScale + inputZeroPoint);
             // input[i] = (int8_t) 0;
         }
     }
@@ -168,7 +164,7 @@ class CoralYolo {
         return ((float)value - outputZeroPoint) * outputScale;
     }
 
-    std::vector<Detection> detectImage(uint8_t* image) {
+    std::vector<Detection> detectImage(uint8_t* image) override {
         preprocessImage(image);
         // printf("Pixel 1 value %d %d %d\n",
         // coral::MutableTensorData<int8_t>(*interpreter->input_tensor(0)).data()[248520],
@@ -182,6 +178,8 @@ class CoralYolo {
             exit(-1);
         }
         printf("Successful copy\n");
+
+
         return processBoxes(
             coral::TensorData<int8_t>(*interpreter->output_tensor(0)));
     }
@@ -247,39 +245,6 @@ class CoralYolo {
     float inputZeroPoint, inputScale, outputZeroPoint, outputScale;
 };
 
-int main(int argc, char* argv[]) {
-    CoralYolo yolo(
-        "/home/pi/yolo_model/"
-        "yolov8n-seg_full_integer_quant_edgetpu.tflite",
-        80, std::stof(argv[1]));
-
-    // yolo.LoadModel();
-    int width, height, channels;
-    width = 640;
-    height = 640;
-    channels = 3;
-    std::vector<uint8_t> image_data =
-        read_bmp("/home/pi/yolo_im.bmp", &width, &height, &channels);
-    // std::ifstream file("/home/pi/yolo_model/yolo_im.rgb", std::ios::binary);
-    // file.read(reinterpret_cast<char *>(image_data.data()), 1228800);
-
-    std::vector<Detection> detections = yolo.detectImage(image_data.data());
-
-    std::ofstream detectionFile("Detections.csv");
-
-    for (Detection detection : detections) {
-        detectionFile << (int)detection.bbox[0] << ',';
-        detectionFile << (int)detection.bbox[1] << ',';
-        detectionFile << (int)detection.bbox[2] << ',';
-        detectionFile << (int)detection.bbox[3] << ',';
-
-        detectionFile << (int)detection.classId << ',';
-        detectionFile << (int)detection.conf << '\n';
-    }
-    detectionFile.close();
-
-    printf("Num detections: %d\n", detections.size());
-
-    _exit(0);
-    // const auto *outputTensor = interpreter->output_tensor(0);
+static std::shared_ptr<CoralYoloItf> createCoralYolo(std::string model_path, int num_classes, float min_conf) {
+    return std::make_shared<CoralYolo>(model_path, num_classes, min_conf);
 }
