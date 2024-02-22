@@ -15,5 +15,5 @@ class CoralYoloItf {
 };
 
 std::shared_ptr<CoralYoloItf> createCoralYolo(std::string model_path,
-                                              int num_classes,
-                                              float min_conf);
+                                              int num_classes, float min_conf,
+                                              float iou_thresh);

@@ -19,4 +19,4 @@ fi
 docker run --rm -it -v "$(pwd):/workspace" "$DOCKER_IMAGE_NAME" /bin/bash \
     /workspace/docker/docker_compile.sh "$TARGET_NAME" "$(id -u):$(id -g)"
 
-scp out/libcoral_yolo.so pi@raspberrypi:/home/pi/camSW
+scp out/libcoral_yolo.so pi@raspberrypi:/home/pi/camSW/libcoral_bindings/out/
