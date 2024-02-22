@@ -8,25 +8,9 @@ package(
 )
 
 cc_binary(
-    name = "test_libcoral",
-    srcs = ["test_libcoral.cc"],
-    deps = [
-        "//coral/examples:file_utils",
-        "//coral:tflite_utils",
-        "//coral/classification:adapter",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@glog",
-        "@libedgetpu//tflite/public:oss_edgetpu_direct_all",  # buildcleaner: keep
-        "@org_tensorflow//tensorflow/lite:framework",
-        "@org_tensorflow//tensorflow/lite/c:common",
-    ],
-)
-
-
-cc_binary(
-    name = "testYolo",
-    srcs = ["testYolo.cc"],
+    name = "coral_yolo",
+    srcs = ["coral_yolo.cpp", "coral_yolo.hpp"],
+    linkopts = ["-shared"],
     deps = [
         "//coral/examples:file_utils",
         "//coral:tflite_utils",

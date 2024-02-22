@@ -1,6 +1,6 @@
 #!/bin/sh
 
-TARGET_NAME=testYolo
+TARGET_NAME=coral_yolo
 DOCKER_IMAGE_NAME=libcoral_build_env
 
 set -e
@@ -19,4 +19,4 @@ fi
 docker run --rm -it -v "$(pwd):/workspace" "$DOCKER_IMAGE_NAME" /bin/bash \
     /workspace/docker/docker_compile.sh "$TARGET_NAME" "$(id -u):$(id -g)"
 
-scp out/testYolo pi@raspberrypi.local:/home/pi/camSW
+scp out/libcoral_yolo.so pi@raspberrypi:/home/pi/camSW

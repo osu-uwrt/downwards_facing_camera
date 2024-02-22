@@ -14,6 +14,6 @@ class CoralYoloItf {
     virtual std::vector<Detection> detectImage(uint8_t* image) = 0;
 };
 
-static std::shared_ptr<CoralYoloItf> createCoralYolo(std::string model_path,
-                                                     int num_classes,
-                                                     float min_conf);
+std::shared_ptr<CoralYoloItf> createCoralYolo(std::string model_path,
+                                              int num_classes,
+                                              float min_conf);
