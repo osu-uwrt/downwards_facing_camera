@@ -1,3 +1,7 @@
 .vscode
 build
 /libcoral_bindings/out
+testYolo
+yoloNoClass
+*.csv
+*.so
