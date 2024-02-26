@@ -16,7 +16,9 @@ int main(int argc, char* argv[]) {
     cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
 
     auto start = std::chrono::high_resolution_clock::now();
-    std::vector<Detection> detections = yolo->detectImage(image.data);
+    yolo->preprocessImage(image.data);
+    yolo->detectImage();
+    std::vector<Detection> detections = yolo->processDetections();
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     printf("Took %dms\n", duration.count());
