@@ -5,21 +5,27 @@
 #include "coral/examples/file_utils.h"
 #include "coral/tflite_utils.h"
 #include "tensorflow/lite/interpreter.h"
+#include "third_party/eigen3/Eigen/Core"
 
 static float iou(float* bbox1, float* bbox2) {
-    float area1 = bbox1[2] * bbox1[3];
-    float area2 = bbox2[2] * bbox2[3];
+    float area1 = bbox1[2] * bbox1[3] * 224 * 224;
+    float area2 = bbox2[2] * bbox2[3] * 224 * 224;
 
     /* If points are (x1, y1) (a1, b1) and (x2, y2) (a2, b2)
        Then the intersection width would be the furthest left "right edge"
        minus the furthest right "left edge"
     */
-    float intersectionWidth = std::max<float>(
-        0, std::min(bbox1[0] + bbox1[2] / 2, bbox2[0] + bbox2[2] / 2) -
-               std::max(bbox1[0] - bbox1[2] / 2, bbox2[0] - bbox2[2] / 2));
-    float intersectionHeight = std::max<float>(
-        0, std::min(bbox1[1] + bbox1[3] / 2, bbox2[1] + bbox2[3] / 2) -
-               std::max(bbox1[1] - bbox1[3] / 2, bbox2[1] - bbox2[3] / 2));
+    float xx =
+        std::min<float>(bbox1[0] - (bbox1[2] / 2), bbox2[0] - (bbox2[2] / 2));
+    float yy =
+        std::max<float>(bbox1[1] - (bbox1[3] / 2), bbox2[1] - (bbox2[3] / 2));
+    float aa =
+        std::min<float>(bbox1[0] + (bbox1[2] / 2), bbox2[0] + (bbox1[2] / 2));
+    float bb =
+        std::min<float>(bbox1[1] + (bbox1[3] / 2), bbox2[1] + (bbox1[3] / 2));
+
+    float intersectionWidth = std::max<float>(0, (aa - xx) * 224);
+    float intersectionHeight = std::max<float>(0, (bb - yy) * 224);
 
     float intersectionArea = intersectionWidth * intersectionHeight;
 
@@ -29,32 +35,11 @@ static float iou(float* bbox1, float* bbox2) {
     return iou;
 }
 
-static void nms(std::vector<Detection>& detections, Detection& newDetection,
-                float iouThreshold) {
-    bool replaced = false;
-    for (int i = 0; i < detections.size(); i++) {
-        if (detections.at(i).classId == newDetection.classId) {
-            float calculatedIOU = iou(detections.at(i).bbox, newDetection.bbox);
-            printf("Calculated IOU: %f\n", calculatedIOU);
-            if (calculatedIOU <= iouThreshold) {
-                if (detections.at(i).conf < newDetection.conf) {
-                    detections.erase(detections.begin() + i);
-                    detections.insert(detections.begin() + i, newDetection);
-                }
-                replaced = true;
-                break;
-            }
-        }
-    }
-    if (!replaced) {
-        detections.emplace_back(newDetection);
-    }
-}
-
 class CoralYolo : public CoralYoloItf {
    public:
     std::string model_path_;
     int num_classes_;
+    int8_t int_min_conf_;
     float min_conf_, iou_thresh_;
 
     CoralYolo(std::string model_path, int num_classes, float min_conf,
@@ -96,63 +81,79 @@ class CoralYolo : public CoralYoloItf {
         inputScale = inputParams.scale;
         inputZeroPoint = inputParams.zero_point;
 
-        const TfLiteQuantizationParams& outputParams =
+        const TfLiteQuantizationParams& bboxOutputParams =
             interpreter->output_tensor(0)->params;
-        outputScale = outputParams.scale;
-        outputZeroPoint = outputParams.zero_point;
+        bboxOutputScale = bboxOutputParams.scale;
+        bboxZeroPoint = bboxOutputParams.zero_point;
+
+        int_min_conf_ = (int8_t)(min_conf_ / bboxOutputScale + bboxZeroPoint);
+
+        const TfLiteQuantizationParams& segOutputParams =
+            interpreter->output_tensor(1)->params;
+        segOutputScale = segOutputParams.scale;
+        segZeroPoint = segOutputParams.zero_point;
     }
 
     void preprocessImage(uint8_t* image) {
-        for (int i = 0; i < 1228800; i++) {
+        for (int i = 0; i < 307200; i++) {
             input[i] = (int8_t)(((float)image[i] / (float)255) / inputScale +
                                 inputZeroPoint);
         }
     }
-
-    float postProcessValue(int8_t value) {
-        return ((float)value - outputZeroPoint) * outputScale;
-    }
-
-    std::vector<Detection> detectImage(uint8_t* image) override {
-        preprocessImage(image);
+    void detectImage() override {
         if (interpreter->Invoke() != kTfLiteOk) {
             printf("Image could not be invoked\n");
             exit(-1);
         }
         printf("Successful copy\n");
+        memcpy(output0,
+               coral::MutableTensorData<int8_t>(*interpreter->output_tensor(0))
+                   .data(),
+               interpreter->output_tensor(0)->bytes);
+        for (int i = 0; i < 204800; i++) {
+            int8_t result =
+                coral::MutableTensorData<int8_t>(*interpreter->output_tensor(0))
+                    .data()[i];
 
-        return processBoxes(
-            coral::TensorData<int8_t>(*interpreter->output_tensor(0)));
+            output1[i] = postProcessValue(result, false);
+        }
+        // masks.set_data(output1);
+        // ruy::MakeSimpleLayout(6400, 32, ruy::Order::kRowMajor,
+        //                       masks.mutable_layout());
+        // ruy::Transpose(masks.mutable_layout());
+        masks = Eigen::Map<Eigen::Matrix<float, 6400, 32, Eigen::RowMajor> >(
+            output1);
+        masks = masks.transpose();
     }
 
-    std::vector<Detection> processBoxes(absl::Span<const int8_t> results) {
+    std::vector<Detection> processDetections(absl::Span<const int8_t> results) {
         std::vector<Detection> detections;
-        printf("Size: %d\n", results.size());
-        int count = 0;
-        for (int i = 0; i < 8400; i++) {
+        for (int i = 0; i < 2100; i++) {
             Detection detection;
-            detection.bbox[0] = postProcessValue(results.at(i));
-            detection.bbox[1] = postProcessValue(results.at(i + 8400));
-            detection.bbox[2] = postProcessValue(results.at(i + 2 * 8400));
-            detection.bbox[3] = postProcessValue(results.at(
-                i + 3 * 8400));  // THIS WAY SHOULD BE RIGHT (AND IT WAS!!!!)
-
-            float maxConf = -1;
+            int8_t maxConf = -127;
             for (int j = 0; j < num_classes_; j++) {
-                float result = postProcessValue(results.at(i + (j + 4) * 8400));
-                if (count == 0 && result > 1) {
-                    printf("This shouldn't happen lol %f\n", result);
-                    count++;
-                }
-                if (result <= 1.0 && result >= min_conf_ &&
-                    result > maxConf) {  // Output tensor shape is (116, 8400)
+                int8_t result = output0[i + (j + 4) * 2100];
+                // Output tensor shape is (116, 8400)
+                if (result >= int_min_conf_ && result > maxConf) {
                     detection.classId = j;
                     maxConf = result;
                 }
             }
             if (maxConf >= min_conf_) {
-                detection.conf = maxConf;
-                nms(detections, detection, iou_thresh_);
+                // THIS WAY SHOULD BE RIGHT (AND IT WAS!!!!)
+                detection.conf = postProcessValue(maxConf, true);
+                detection.bbox[0] = postProcessValue(output0[i], true);
+                detection.bbox[1] = postProcessValue(output0[i + 2100], true);
+                detection.bbox[2] =
+                    postProcessValue(output0[i + 2 * 2100], true);
+                detection.bbox[3] =
+                    postProcessValue(output0[i + 3 * 2100], true);
+                Eigen::VectorXf maskWeights(32);
+                for (int j = 0; j < 32; j++) {
+                    maskWeights[j] = postProcessValue(
+                        output0[i + num_classes_ + j * 2100], true);
+                }
+                nmsWithMask(detections, detection, iou_thresh_, maskWeights);
             }
         }
         return detections;
@@ -162,8 +163,50 @@ class CoralYolo : public CoralYoloItf {
     std::unique_ptr<tflite::FlatBufferModel> model;
     std::unique_ptr<tflite::Interpreter> interpreter;
     std::shared_ptr<edgetpu::EdgeTpuContext> edgetpu_context;
-    int8_t* input;
-    float inputZeroPoint, inputScale, outputZeroPoint, outputScale;
+    int8_t *input, *output0;
+    float inputZeroPoint, inputScale, bboxZeroPoint, bboxOutputScale,
+        segZeroPoint, segOutputScale;
+    float output1[204800];
+    Eigen::MatrixXf masks;
+
+    float postProcessValue(int8_t value, bool isOutput0) {
+        if (isOutput0) {
+            return ((float)value - bboxZeroPoint) * bboxOutputScale;
+        } else {
+            return ((float)value - segZeroPoint) * segOutputScale;
+        }
+    }
+
+
+    float* processMask(Eigen::VectorXf *weights) {
+        Eigen::MatrixXf outputMask = (*weights) * masks;
+        return outputMask.data();
+    }
+
+    void nmsWithMask(std::vector<Detection>& detections,
+                            Detection& newDetection, float iouThreshold,
+                            Eigen::VectorXf& maskWeights) {
+        bool replaced = false;
+        for (int i = 0; i < detections.size(); i++) {
+            if (detections.at(i).classId == newDetection.classId) {
+                float calculatedIOU =
+                    iou(detections.at(i).bbox, newDetection.bbox);
+                if (calculatedIOU > iouThreshold) {
+                    if (detections.at(i).conf < newDetection.conf) {
+                        detections.erase(detections.begin() + i);
+                        float* mask = processMask(&maskWeights);
+                        memcpy(newDetection.mask, mask, 6400);
+                        detections.emplace_back(newDetection);
+                    }
+                    replaced = true;
+                    break;
+                }
+            }
+        }
+        if (!replaced) {
+            detections.emplace_back(newDetection);
+        }
+    }
 };
 
 std::shared_ptr<CoralYoloItf> createCoralYolo(std::string model_path,

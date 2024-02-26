@@ -7,11 +7,12 @@ struct Detection {
     int classId;
     float conf;
     float bbox[4];
+    float mask[80][80];
 };
 
 class CoralYoloItf {
    public:
-    virtual std::vector<Detection> detectImage(uint8_t* image) = 0;
+    virtual void detectImage() = 0;
 };
 
 std::shared_ptr<CoralYoloItf> createCoralYolo(std::string model_path,
