@@ -13,6 +13,10 @@ struct Detection {
 class CoralYoloItf {
    public:
     virtual void detectImage() = 0;
+
+    virtual void preprocessImage(uint8_t* image) = 0;
+
+    virtual std::vector<Detection> processDetections() = 0;
 };
 
 std::shared_ptr<CoralYoloItf> createCoralYolo(std::string model_path,

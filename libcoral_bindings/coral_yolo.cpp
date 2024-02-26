@@ -126,7 +126,7 @@ class CoralYolo : public CoralYoloItf {
         masks = masks.transpose();
     }
 
-    std::vector<Detection> processDetections(absl::Span<const int8_t> results) {
+    std::vector<Detection> processDetections() {
         std::vector<Detection> detections;
         for (int i = 0; i < 2100; i++) {
             Detection detection;
