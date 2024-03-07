@@ -1,6 +1,5 @@
 #include "coral_yolo.hpp"
 
-#include <fstream>
 #include <iostream>
 
 #include "coral/examples/file_utils.h"
@@ -111,19 +110,12 @@ class CoralYolo : public CoralYoloItf {
                coral::MutableTensorData<int8_t>(*interpreter->output_tensor(0))
                    .data(),
                interpreter->output_tensor(0)->bytes);
-        // printf("Output1 dims: %d, %d, %d, %d\n",
-        //        interpreter->output_tensor(1)->dims->data[0],
-        //        interpreter->output_tensor(1)->dims->data[1],
-        //        interpreter->output_tensor(1)->dims->data[2],
-        //        interpreter->output_tensor(1)->dims->data[3]);
-        // printf("Copying output1\n");
         for (int i = 0; i < 204800; i++) {
             int8_t result =
-                coral::MutableTensorData<int8_t>(*interpreter->output_tensor(1))
+                coral::MutableTensorData<int8_t>(*interpreter->output_tensor(0))
                     .data()[i];
 
             output1[i] = postProcessValue(result, false);
-            // printf("Copying to index %d", i);
         }
         // printf("Copying to eigen matrix\n");
         masks = Eigen::Map<Eigen::Matrix<float, 6400, 32, Eigen::RowMajor>>(output1);
@@ -138,7 +130,7 @@ class CoralYolo : public CoralYoloItf {
             int8_t maxConf = -127;
             for (int j = 0; j < num_classes_; j++) {
                 int8_t result = output0[i + (j + 4) * 2100];
-                // Output tensor shape is (116, 2100)
+                // Output tensor shape is (116, 8400)
                 if (result >= int_min_conf_ && result > maxConf) {
                     detection.classId = j;
                     maxConf = result;
@@ -153,16 +145,11 @@ class CoralYolo : public CoralYoloItf {
                     postProcessValue(output0[i + 2 * 2100], true);
                 detection.bbox[3] =
                     postProcessValue(output0[i + 3 * 2100], true);
-                Eigen::MatrixXf maskWeights(32, 1);
-                // printf("Processing mask weights\n");
+                Eigen::VectorXf maskWeights(32);
                 for (int j = 0; j < 32; j++) {
-                    maskWeights.data()[j] = postProcessValue(
-                        output0[i + 4 + num_classes_ + j * 2100], true);
-                    if (std::isnan(maskWeights.data()[j])) {
-                        printf("Got a nan\n");
-                    }
+                    maskWeights[j] = postProcessValue(
+                        output0[i + num_classes_ + j * 2100], true);
                 }
-                // printf("Running nms\n");
                 nmsWithMask(detections, detection, iou_thresh_, maskWeights);
             }
         }
@@ -173,7 +160,7 @@ class CoralYolo : public CoralYoloItf {
     std::unique_ptr<tflite::FlatBufferModel> model;
     std::unique_ptr<tflite::Interpreter> interpreter;
     std::shared_ptr<edgetpu::EdgeTpuContext> edgetpu_context;
-    int8_t *input, output0[243600];
+    int8_t *input, *output0;
     float inputZeroPoint, inputScale, bboxZeroPoint, bboxOutputScale,
         segZeroPoint, segOutputScale;
     float output1[204800];
@@ -187,14 +174,6 @@ class CoralYolo : public CoralYoloItf {
         }
     }
 
-    static float sigmoid(float value) { return (float)(1 / (1 + exp(-value))); }
-    static float fixValue(float value) {
-        if (value > 0.5) {
-            return (float)1.0;
-        } else {
-            return (float)0.0;
-        }
-    }
 
     void processMask(Eigen::MatrixXf& weights, Detection& detection) {
         Eigen::Matrix<float, 6400, 1> outputMask;
@@ -212,8 +191,8 @@ class CoralYolo : public CoralYoloItf {
     }
 
     void nmsWithMask(std::vector<Detection>& detections,
-                     Detection& newDetection, float iouThreshold,
-                     Eigen::MatrixXf& maskWeights) {
+                            Detection& newDetection, float iouThreshold,
+                            Eigen::VectorXf& maskWeights) {
         bool replaced = false;
         for (int i = 0; i < detections.size(); i++) {
             if (detections.at(i).classId == newDetection.classId) {
