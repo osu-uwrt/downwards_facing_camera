@@ -106,7 +106,6 @@ class CoralYolo : public CoralYoloItf {
             printf("Image could not be invoked\n");
             exit(-1);
         }
-        printf("Successful copy\n");
         // printf("Copying output0\n");
         memcpy(output0,
                coral::MutableTensorData<int8_t>(*interpreter->output_tensor(0))
@@ -118,7 +117,6 @@ class CoralYolo : public CoralYoloItf {
         //        interpreter->output_tensor(1)->dims->data[2],
         //        interpreter->output_tensor(1)->dims->data[3]);
         // printf("Copying output1\n");
-        std::ofstream maskOutputs("/home/pi/MaskOutput.csv");
         for (int i = 0; i < 204800; i++) {
             int8_t result =
                 coral::MutableTensorData<int8_t>(*interpreter->output_tensor(1))
@@ -129,13 +127,6 @@ class CoralYolo : public CoralYoloItf {
         }
         // printf("Copying to eigen matrix\n");
         masks = Eigen::Map<Eigen::Matrix<float, 6400, 32, Eigen::RowMajor>>(output1);
-        for (int i = 0; i < 204800; i++) {
-            if (std::isnan(masks.data()[i])) {
-                printf("Copy failed\n");
-            }
-            maskOutputs << std::to_string(masks.data()[i]) << ',';
-        }
-        maskOutputs.close();
         // masks = masks.transpose();
         // printf("Transposed\n");
     }
@@ -206,17 +197,6 @@ class CoralYolo : public CoralYoloItf {
     }
 
     void processMask(Eigen::MatrixXf& weights, Detection& detection) {
-        // printf("Multiplying\n");;
-        for (int i = 0; i < 204800; i++) {
-            if (std::isnan(masks.data()[i])) {
-                printf("Part of mask weights is nan\n");
-            }
-        }
-        for (int i = 0; i < 32; i++) {
-            if (std::isnan(weights.data()[i])) {
-                printf("Part of mask weights is nan\n");
-            }
-        }
         Eigen::Matrix<float, 6400, 1> outputMask;
         outputMask.noalias() = masks * weights;
         outputMask = outputMask.unaryExpr(std::ref(sigmoid));
@@ -243,14 +223,7 @@ class CoralYolo : public CoralYoloItf {
                     if (detections.at(i).conf < newDetection.conf) {
                         detections.erase(detections.begin() + i);
                         // printf("Calculating mask\n");
-                        for (int i = 0; i < 32; i++) {
-                            if (std::isnan(maskWeights.data()[i])) {
-                                printf("Part of mask weights is nan in nms\n");
-                            }
-                        }
                         processMask(maskWeights, newDetection);
-                        std::copy(maskWeights.data(), maskWeights.data() + 32,
-                                  newDetection.maskWeights);
                         detections.emplace_back(newDetection);
                     }
                     replaced = true;
@@ -260,8 +233,6 @@ class CoralYolo : public CoralYoloItf {
         }
         if (!replaced) {
             processMask(maskWeights, newDetection);
-            std::copy(maskWeights.data(), maskWeights.data() + 32,
-                      newDetection.maskWeights);
             detections.emplace_back(newDetection);
         }
     }
