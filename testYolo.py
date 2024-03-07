@@ -8,7 +8,7 @@ image = cv2.imread("/home/markc/yolo_im.bmp")
 
 model = YOLO('/home/markc/Downloads/Buoy_Gate_Torpedo_300_Rotation360_2575_Mirror_Nano.pt')
 
-model.export(format="edgetpu")
+model.export(format="edgetpu", imgsz=320)
 
 # ret = model(image, conf=0.8, iou=0.0)
 
