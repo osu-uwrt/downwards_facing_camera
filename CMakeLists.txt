@@ -12,6 +12,3 @@ add_executable(runCameras libcoral_bindings/main.cpp tools/mySerial.cpp)
 
 target_link_directories(runCameras PUBLIC libcoral_bindings/out/)
 target_link_libraries(runCameras -llccv ${OpenCV_LIBS} -lcoral_yolo)
-
-add_executable(runDepth src/main.cpp tools/mySerial.cpp)
-target_link_libraries(runDepth -llccv ${OpenCV_LIBS})
