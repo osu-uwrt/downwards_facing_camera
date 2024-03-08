@@ -32,17 +32,7 @@ int main(int argc, char* argv[]) {
         detectionFile << detection.bbox[3] << ',';
 
         detectionFile << detection.classId << ',';
-<<<<<<< Updated upstream
         detectionFile << detection.conf << '\n';
-=======
-        detectionFile << detection.conf << ',';
-        detectionFile << '\n';
-        for (int i = 0; i < 6400; i++) {
-            masksFile << detection.mask[i] << ',';
-        }
-        masksFile << '\n';
-        counter++;
->>>>>>> Stashed changes
     }
     detectionFile.close();
 
