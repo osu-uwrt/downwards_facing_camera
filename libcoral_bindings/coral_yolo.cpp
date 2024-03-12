@@ -106,7 +106,7 @@ class CoralYolo : public CoralYoloItf {
             printf("Image could not be invoked\n");
             exit(-1);
         }
-        printf("Successful copy\n");
+        // printf("Successful copy\n");
         // printf("Copying output0\n");
         memcpy(output0,
                coral::MutableTensorData<int8_t>(*interpreter->output_tensor(0))
@@ -127,7 +127,8 @@ class CoralYolo : public CoralYoloItf {
             // printf("Copying to index %d", i);
         }
         // printf("Copying to eigen matrix\n");
-        masks = Eigen::Map<Eigen::Matrix<float, 6400, 32, Eigen::RowMajor>>(output1);
+        masks = Eigen::Map<Eigen::Matrix<float, 6400, 32, Eigen::RowMajor>>(
+            output1);
         // masks = masks.transpose();
         // printf("Transposed\n");
     }
@@ -146,22 +147,8 @@ class CoralYolo : public CoralYoloItf {
                 }
             }
             if (maxConf >= min_conf_) {
-                // THIS WAY SHOULD BE RIGHT (AND IT WAS!!!!)
                 detection.conf = postProcessValue(maxConf, true);
-                detection.bbox[0] = postProcessValue(output0[i], true);
-                detection.bbox[1] = postProcessValue(output0[i + 2100], true);
-                detection.bbox[2] =
-                    postProcessValue(output0[i + 2 * 2100], true);
-                detection.bbox[3] =
-                    postProcessValue(output0[i + 3 * 2100], true);
-                Eigen::MatrixXf maskWeights(32, 1);
-                // printf("Processing mask weights\n");
-                for (int j = 0; j < 32; j++) {
-                    maskWeights.data()[j] = postProcessValue(
-                        output0[i + 4 + num_classes_ + j * 2100], true);
-                }
-                // printf("Running nms\n");
-                nmsWithMask(detections, detection, iou_thresh_, maskWeights);
+                nmsWithMask(detections, detection, iou_thresh_, i);
             }
         }
         return detections;
@@ -185,51 +172,52 @@ class CoralYolo : public CoralYoloItf {
         }
     }
 
-    static float sigmoid(float value) { return (float)(1 / (1 + exp(-value))); }
-    static float fixValue(float value) {
-        if (value > 0.5) {
-            return (float)1.0;
-        } else {
-            return (float)0.0;
-        }
+    void setDetectionValues(Detection& detection, int loc) {
+        detection.bbox[0] = postProcessValue(output0[loc], true);
+        detection.bbox[1] = postProcessValue(output0[loc + 2100], true);
+        detection.bbox[2] = postProcessValue(output0[loc + 2 * 2100], true);
+        detection.bbox[3] = postProcessValue(output0[loc + 3 * 2100], true);
     }
 
-    void processMask(Eigen::MatrixXf& weights, Detection& detection) {
+    static bool outputToBool(float value) {
+        return (float)(1 / (1 + exp(-value))) > 0.5;
+    }
+
+    void processMask(Detection& detection, int loc) {
         Eigen::Matrix<float, 6400, 1> outputMask;
+        Eigen::Matrix<bool, 6400, 1> boolMask;
+        Eigen::MatrixXf weights(32, 1);
+        for (int j = 0; j < 32; j++) {
+            weights.data()[j] = postProcessValue(
+                output0[loc + 4 + num_classes_ + j * 2100], true);
+        }
         outputMask.noalias() = masks * weights;
-        outputMask = outputMask.unaryExpr(std::ref(sigmoid));
-        outputMask = outputMask.unaryExpr(std::ref(fixValue));
-        // Eigen::ArrayXf array;
-        // outputMask = outputMask.unaryExpr([](float elem) {
-        //     return elem > (float) 0.5 ? (float) 1.0 : (float) 0.0;
-        // });
-        // outputMask = outputMask.unaryExpr(&fixValue);
-        // outputMask = (outputMask.array() > 0.5).select(1.0, outputMask);
-        Eigen::Map<Eigen::MatrixXf>(detection.mask, 6400, 1) = outputMask;
-        // std::copy(outputMask.data(), outputMask.data() + 6400, detection.mask);
+        boolMask = outputMask.unaryExpr(std::ref(outputToBool));
+        Eigen::Map<Eigen::MatrixX<bool>>(detection.mask, 6400, 1) = boolMask;
     }
 
     void nmsWithMask(std::vector<Detection>& detections,
-                     Detection& newDetection, float iouThreshold,
-                     Eigen::MatrixXf& maskWeights) {
+                     Detection& newDetection, float iouThreshold, int loc) {
         bool replaced = false;
         for (int i = 0; i < detections.size(); i++) {
             if (detections.at(i).classId == newDetection.classId) {
+                setDetectionValues(newDetection, loc);
                 float calculatedIOU =
                     iou(detections.at(i).bbox, newDetection.bbox);
                 if (calculatedIOU > iouThreshold) {
                     if (detections.at(i).conf < newDetection.conf) {
                         detections.erase(detections.begin() + i);
-                        processMask(maskWeights, newDetection);
+                        processMask(newDetection, loc);
                         detections.emplace_back(newDetection);
                     }
-                    replaced = true;
-                    break;
                 }
+                replaced = true;
+                break;
             }
         }
         if (!replaced) {
-            processMask(maskWeights, newDetection);
+            setDetectionValues(newDetection, loc);
+            processMask(newDetection, loc);
             detections.emplace_back(newDetection);
         }
     }
