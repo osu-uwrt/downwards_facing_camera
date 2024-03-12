@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <time.h>
 #include "tools/mySerial.h"
+#include "coral_yolo.hpp"
 
 mySerial serialPort("/dev/ttyAMA0", 600);
 
@@ -21,6 +22,10 @@ void sendSerial()
 {
     serialPort.Send('\x00');
 }
+
+// bool isInSegment(cv::Point2d point, float *segMap) {
+//     if (segMap)
+// }
 
 int numDisparities = 18;
 int blockSize = 2;
