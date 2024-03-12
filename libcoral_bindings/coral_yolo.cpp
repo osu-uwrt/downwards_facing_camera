@@ -106,31 +106,20 @@ class CoralYolo : public CoralYoloItf {
             printf("Image could not be invoked\n");
             exit(-1);
         }
-        // printf("Successful copy\n");
-        // printf("Copying output0\n");
         memcpy(output0,
                coral::MutableTensorData<int8_t>(*interpreter->output_tensor(0))
                    .data(),
                interpreter->output_tensor(0)->bytes);
-        // printf("Output1 dims: %d, %d, %d, %d\n",
-        //        interpreter->output_tensor(1)->dims->data[0],
-        //        interpreter->output_tensor(1)->dims->data[1],
-        //        interpreter->output_tensor(1)->dims->data[2],
-        //        interpreter->output_tensor(1)->dims->data[3]);
-        // printf("Copying output1\n");
         for (int i = 0; i < 204800; i++) {
             int8_t result =
                 coral::MutableTensorData<int8_t>(*interpreter->output_tensor(1))
                     .data()[i];
 
             output1[i] = postProcessValue(result, false);
-            // printf("Copying to index %d", i);
         }
-        // printf("Copying to eigen matrix\n");
+
         masks = Eigen::Map<Eigen::Matrix<float, 6400, 32, Eigen::RowMajor>>(
             output1);
-        // masks = masks.transpose();
-        // printf("Transposed\n");
     }
 
     std::vector<Detection> processDetections() {
