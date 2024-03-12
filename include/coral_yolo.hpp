@@ -7,7 +7,7 @@ struct Detection {
     int classId;
     float conf;
     float bbox[4];
-    float mask[6400];
+    bool mask[6400];
 };
 
 class CoralYoloItf {

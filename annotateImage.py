@@ -29,10 +29,10 @@ for i in range(len(bboxes)):
     mask = mask.astype(np.uint8)
     mask *= 255
     # bboxSize = (bboxes[i][3], bboxes[i][2])
-    mask = mask.reshape((80, 80), order='F')
+    mask = mask.reshape((80, 80), order='C')
     mask = cv2.resize(mask, (320, 320))
     print(mask.shape)
-    cv2.imshow("test", mask.T)
+    cv2.imshow("test", mask)
     cv2.waitKey(0)
     # imageCpy = np.where(mask[..., None], (0, 255, 0), image)
     # image = cv2.addWeighted(image, 0.8, imageCpy, 0.2, 0)
