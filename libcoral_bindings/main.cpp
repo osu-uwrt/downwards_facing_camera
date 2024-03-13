@@ -9,10 +9,10 @@
 
 int main(int argc, char* argv[]) {
     auto yolo = createCoralYolo(
-        "/home/pi/robert_attempt3/yolo_models/yolov8n_seg_rescaled_edgetpu.tflite",
+        "/home/pi/Buoy_Gate_Torpedo_300_Rotation360_2575_Mirror_Nano_full_integer_quant_edgetpu.tflite",
         80, std::stof(argv[1]), std::stof(argv[2]));
 
-    cv::Mat image = cv::imread("/home/pi/yolo_im_reshape.bmp", cv::IMREAD_ANYCOLOR);
+    cv::Mat image = cv::imread("/home/pi/template_small.bmp", cv::IMREAD_ANYCOLOR);
     cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -24,6 +24,7 @@ int main(int argc, char* argv[]) {
     printf("Took %dms\n", duration.count());
 
     std::ofstream detectionFile("Detections.csv");
+    std::ofstream masksFile("/home/pi/masks.csv");
 
     for (Detection &detection : detections) {
         detectionFile << detection.bbox[0] << ',';
@@ -33,8 +34,13 @@ int main(int argc, char* argv[]) {
 
         detectionFile << detection.classId << ',';
         detectionFile << detection.conf << '\n';
+        for (int i = 0; i < 6400; i++) {
+            masksFile << detection.mask[i] << ',';
+        }
+        masksFile << '\n';
     }
     detectionFile.close();
+    masksFile.close();
 
     printf("Num detections: %d\n", detections.size());
 
