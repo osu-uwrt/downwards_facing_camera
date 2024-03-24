@@ -5,3 +5,7 @@ testYolo
 yoloNoClass
 *.csv
 *.so
+
+micro_ros_raspi/libmicroros
+micro_ros_raspi/available_ros2_types
+micro_ros_raspi/built_packages

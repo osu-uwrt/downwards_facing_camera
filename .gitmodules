@@ -1,0 +1,3 @@
+[submodule "titan_canmore"]
+	path = titan_canmore
+	url = https://github.com/osu-uwrt/titan_canmore
