@@ -117,7 +117,7 @@ void CanmoreTTYServer::sigchldUnblock() {
     }
 
 CanmoreTTYServer::CanmoreTTYServer(int ifIndex, uint8_t clientId, const std::string &termEnv, uint16_t initialRows,
-                                   uint16_t initialCols, const std::string &cmd):
+                                   uint16_t initialCols, const std::string &cmd, const std::string &workingDir):
     canmoreServer_(*this, ifIndex, clientId) {
     // Open the eventfd for reporting when the child dies
     sigchldEventFd_ = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
@@ -176,10 +176,13 @@ CanmoreTTYServer::CanmoreTTYServer(int ifIndex, uint8_t clientId, const std::str
         // Clear the system environment to a fresh one
         cerrchk(clearenv());
 
-        // Go to the home directory
-        if (chdir(homedir)) {
-            // If that fails (user's home directory), go to the root directory
-            cerrchk(chdir("/"));
+        // Go to working dir if specified
+        if (workingDir.empty() || chdir(workingDir.c_str())) {
+            // Fall back to home directory if not
+            if (chdir(homedir)) {
+                // If that fails (user's home directory), go to the root directory
+                cerrchk(chdir("/"));
+            }
         }
 
         // Set the user environment variables

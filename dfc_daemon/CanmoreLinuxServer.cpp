@@ -42,6 +42,8 @@ CanmoreLinuxServer::CanmoreLinuxServer(int ifIndex, uint8_t clientId):
                                      bind_reg_cb(&CanmoreLinuxServer::enableTtyCb));
     tty_control->addMemoryRegister(CANMORE_LINUX_TTY_CONTROL_WINDOW_SIZE_OFFSET, REGISTER_PERM_READ_WRITE,
                                    &windowSzReg_);
+    tty_control->addMemoryRegister(CANMORE_LINUX_TTY_CONTROL_USE_UPLOAD_DIR_OFFSET, REGISTER_PERM_READ_WRITE,
+                                   &runCmdFromUploadDir_);
     addRegisterPage(CANMORE_LINUX_TTY_CONTROL_PAGE_NUM, std::move(tty_control));
 
     // Define terminal environment variable string
@@ -90,7 +92,7 @@ bool CanmoreLinuxServer::restartDaemonCb(uint16_t addr, bool is_write, uint32_t 
 }
 
 void CanmoreLinuxServer::getTtyInitialConfig(std::string &termEnv, uint16_t &initialRows, uint16_t &initialCols,
-                                             std::string &cmd) {
+                                             std::string &cmd, std::string &workingDir) {
     // Decode window size register
     initialRows = windowSzReg_ >> 16;
     initialCols = (uint16_t) (windowSzReg_ & 0xFFFF);
@@ -104,6 +106,14 @@ void CanmoreLinuxServer::getTtyInitialConfig(std::string &termEnv, uint16_t &ini
     const char *cmdPtr = reinterpret_cast<char *>(cmdBuf_.data());
     size_t cmdSize = strnlen(cmdPtr, cmdBuf_.size());
     cmd.assign(cmdPtr, cmdSize);
+
+    // Set the working dir if we want to use the upload one
+    if (runCmdFromUploadDir_) {
+        workingDir.assign(file_pwd_);
+    }
+    else {
+        workingDir.assign("");
+    }
 }
 
 bool CanmoreLinuxServer::enableTtyCb(uint16_t addr, bool is_write, uint32_t *data_ptr) {

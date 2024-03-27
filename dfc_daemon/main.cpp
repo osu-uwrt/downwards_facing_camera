@@ -82,12 +82,13 @@ int main(int argc, char **argv) {
                     // Grab the initial config from the reg mapped server
                     std::string termName;
                     std::string cmd;
+                    std::string workingDir;
                     uint16_t initialRows;
                     uint16_t initialCols;
-                    regMappedServer.getTtyInitialConfig(termName, initialRows, initialCols, cmd);
+                    regMappedServer.getTtyInitialConfig(termName, initialRows, initialCols, cmd, workingDir);
 
-                    ttyServer =
-                        std::make_shared<CanmoreTTYServer>(ifIdx, clientId, termName, initialRows, initialCols, cmd);
+                    ttyServer = std::make_shared<CanmoreTTYServer>(ifIdx, clientId, termName, initialRows, initialCols,
+                                                                   cmd, workingDir);
                     group.addFd(*ttyServer);
                 }
                 else {
