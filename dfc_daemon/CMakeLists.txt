@@ -25,6 +25,7 @@ add_executable(dfc_daemon
     CanmoreLinuxServer.cpp
     PTYMaster.cpp
     RemoteTTYServer.cpp
+    SerialLookup.cpp
 )
 
 target_compile_options(dfc_daemon PUBLIC -Wno-unused-parameter -Wall -Wextra)

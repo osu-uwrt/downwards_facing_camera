@@ -23,9 +23,10 @@ CanmoreLinuxServer::CanmoreLinuxServer(int ifIndex, uint8_t clientId):
     // Define general control page
     auto gen_control = Canmore::RegMappedRegisterPage::create();
     gen_control->addConstRegister(CANMORE_LINUX_GEN_CONTROL_MAGIC_OFFSET, CANMORE_LINUX_GEN_CONTROL_MAGIC_VALUE);
-    // TODO: Compute real flash ID value
-    gen_control->addConstRegister(CANMORE_LINUX_GEN_CONTROL_LOWER_FLASH_ID, 0xEFBEADDE);
-    gen_control->addConstRegister(CANMORE_LINUX_GEN_CONTROL_UPPER_FLASH_ID, 0xCEFAEDFE);
+
+    uint64_t serialNum = discoverSerialNumber();
+    gen_control->addConstRegister(CANMORE_LINUX_GEN_CONTROL_LOWER_FLASH_ID, serialNum & 0xFFFFFFFF);
+    gen_control->addConstRegister(CANMORE_LINUX_GEN_CONTROL_UPPER_FLASH_ID, (serialNum >> 32) & 0xFFFFFFFF);
 
     gen_control->addCallbackRegister(CANMORE_LINUX_GEN_CONTROL_RESTART_DAEMON_OFFSET, REGISTER_PERM_WRITE_ONLY,
                                      bind_reg_cb(&CanmoreLinuxServer::restartDaemonCb));

@@ -8,6 +8,8 @@
 #include <signal.h>
 #include <sys/types.h>
 
+uint64_t discoverSerialNumber(void);
+
 class HeartbeatTransmitter {
 public:
     HeartbeatTransmitter(int ifIndex, int clientId);
