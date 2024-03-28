@@ -197,8 +197,18 @@ CanmoreTTYServer::CanmoreTTYServer(int ifIndex, uint8_t clientId, const std::str
             cerrchk(setenv("TERM", termEnv.c_str(), true));
         }
 
+        // Determine arg 0 (will either be normal or login shell, depending if running a command)
         char *shellName = basename(loginshell);
-        char shellArg0[strlen(shellName) + 1 + 1] = "-";
+        char shellArg0[strlen(shellName) + 2];
+        if (cmd.empty()) {
+            // No command, full login shell
+            shellArg0[0] = '-';
+            shellArg0[1] = '\0';
+        }
+        else {
+            // Running command, just spawn a standard shell (no leading - on command name)
+            shellArg0[0] = '\0';
+        }
         strncat(&shellArg0[1], shellName, sizeof(shellArg0) - 2);
         shellArg0[sizeof(shellArg0) - 1] = 0;
 
