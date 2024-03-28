@@ -188,6 +188,7 @@ CanmoreTTYServer::CanmoreTTYServer(int ifIndex, uint8_t clientId, const std::str
         // Set the user environment variables
         cerrchk(setenv("USER", username, true));
         cerrchk(setenv("USERNAME", username, true));
+        cerrchk(setenv("LOGNAME", username, true));
         cerrchk(setenv("HOME", homedir, true));
         cerrchk(setenv("SHELL", loginshell, true));
         cerrchk(setenv("LANG", "en_US.UTF-8", true));

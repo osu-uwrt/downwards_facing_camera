@@ -19,7 +19,7 @@ static void shutdownHandler(int signum) {
         signalServerPtr = nullptr;  // Deregister so if we manage to get multiple fires, it won't go through
     }
 
-    // Throw the signal again (and it's oneshot so it won't fire again)
+    // Throw the signal again (and the signal handler is oneshot so it won't fire again)
     kill(getpid(), signum);
 }
 
@@ -47,6 +47,8 @@ static void cleanupShutdownHandler() {
 // ========================================
 
 int main(int argc, char **argv) {
+    SystemdNotifier notifier;
+
     if (argc < 2) {
         std::cerr << "Expected interface name argument" << std::endl;
         return 1;
@@ -71,6 +73,9 @@ int main(int argc, char **argv) {
     regMappedServer.forceTTYdisconnect();
     installShutdownHandler(&regMappedServer);
 
+    notifier.reportReady();
+    notifier.reportStatus("DFC Daemon ready to receive commands");
+
     try {
         while (!regMappedServer.stopRequested()) {
             group.processEvent(1000);
@@ -78,6 +83,8 @@ int main(int argc, char **argv) {
             // Handle starting up/shutting down the tty server
             if (regMappedServer.getTtyEnabled()) {
                 if (!ttyServer) {
+                    notifier.reportStatus("Remote TTY Session Alive");
+
                     // TTY enabled, but no server. That means we need to start it
                     // Grab the initial config from the reg mapped server
                     std::string termName;
@@ -98,6 +105,8 @@ int main(int argc, char **argv) {
                         // Notify the reg mapped server that we shut down, then destroy the tty server
                         regMappedServer.notifyTtyShutdown();
                         ttyServer.reset();
+
+                        notifier.reportStatus("Remote TTY Session Terminated by Client");
                     }
                 }
             }
@@ -105,9 +114,16 @@ int main(int argc, char **argv) {
                 if (ttyServer) {
                     // Reg mapped server must have shut off the tty, destroy the tty server
                     ttyServer.reset();
+
+                    notifier.reportStatus("Remote TTY Session Terminated by CANmore Register Request");
                 }
             }
+
+            // Feed Systemd Watchdog (so it knows the process hasn't hung)
+            notifier.feedWatchdog();
         }
+
+        notifier.reportStopping();
     } catch (...) {
         // If we die, send a disconnect to make the client aware that we're going away
         cleanupShutdownHandler();

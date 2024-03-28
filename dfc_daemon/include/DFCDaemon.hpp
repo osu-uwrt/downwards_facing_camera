@@ -6,6 +6,7 @@
 
 #include <map>
 #include <signal.h>
+#include <string>
 #include <sys/types.h>
 
 uint64_t discoverSerialNumber(void);
@@ -144,4 +145,18 @@ private:
     static void sigchldInstallHandler();
     static void sigchldBlock();
     static void sigchldUnblock();
+};
+
+class SystemdNotifier {
+public:
+    SystemdNotifier() { reportStatus("Initialized Systemd Notifier"); }
+
+    void reportReady() { notifyState("READY=1"); }
+    void reportStopping() { notifyState("STOPPING=1"); }
+    void reportStatus(const std::string &status) { notifyState("STATUS=" + status); }
+    void feedWatchdog() { notifyState("WATCHDOG=1"); }
+    void triggerWatchdogRestart() { notifyState("WATCHDOG=trigger"); }
+
+private:
+    void notifyState(const std::string &state);
 };

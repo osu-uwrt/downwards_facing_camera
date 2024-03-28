@@ -1,0 +1,38 @@
+[Unit]
+Description=Downwards Facing Camera CAN Bus Daemon (on interface %I)
+Wants=networking-online.target
+After=networking-online.target
+
+[Service]
+# Run the DFC Daemon process for the requested interface
+ExecStart=@DFC_DAEMON_INSTALL_PATH@ "%I"
+WorkingDirectory=~
+User=@DFC_DAEMON_RUN_USER@
+Group=@DFC_DAEMON_RUN_GROUP@
+
+# Define system service type
+# Don't report started up until sd_notify reports ready
+Type=notify
+# And restrict sd_notify calls to only the main process
+NotifyAccess=main
+# If the system is out of memory, we want to keep this service alive as much as possible so we can debug
+OOMPolicy=continue
+
+# Service startup/shutdown behavior
+Restart=always
+# Start 500ms between last shutdown and next startup
+RestartSec=500ms
+WatchdogSec=5s
+TimeoutStartSec=20s
+TimeoutStopSec=5s
+# Give time for process to write core dump
+TimeoutAbortSec=20s
+# Set to abort so if we fail startup/shutdown, it can create a core dump to analyze crash
+TimeoutStartFailureMode=abort
+TimeoutStopFailureMode=abort
+
+[Install]
+WantedBy=multi-user.target
+
+# If the template doesn't have an instance specified, default to can0
+DefaultInstance=can0
