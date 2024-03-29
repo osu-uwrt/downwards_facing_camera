@@ -22,6 +22,11 @@ pushd firmware/mcu_ws > /dev/null
     cp -R geometry2/tf2_msgs ros2/tf2_msgs
     rm -rf geometry2
 
+    # Another workaround for vision msgs
+    git clone -b ros2 https://github.com/ros-perception/vision_msgs
+    cp -R vision_msgs/vision_msgs ros2/vision_msgs
+    rm -rf vision_msgs
+
     # Import user defined packages
     mkdir extra_packages
     pushd extra_packages > /dev/null
