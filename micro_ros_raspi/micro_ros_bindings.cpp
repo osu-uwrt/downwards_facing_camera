@@ -70,7 +70,7 @@ protected:
 
 private:
     size_t copyBufWriteLen = 0;
-    std::span<uint8_t> *copyBuf;
+    std::span<uint8_t> *copyBuf = NULL;
 
     Canmore::PollGroup pollGroup;
     Canmore::MsgClient msgClient;

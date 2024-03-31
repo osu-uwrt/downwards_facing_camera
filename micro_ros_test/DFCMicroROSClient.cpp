@@ -5,12 +5,15 @@
 
 #include <rmw_microros/rmw_microros.h>
 #include <std_msgs/msg/int32.h>
+#include <std_srvs/srv/set_bool.h>
 #include <vision_msgs/msg/detection3_d_array.h>
 
 #include <iostream>
 #include <time.h>
 
 #define AGENT_PING_TIMEOUT_MS 2000
+#define AGENT_KEEPALIVE_TIMEOUT_MS 100
+#define AGENT_KEEPING_PING_ATTEMPTS 5
 
 #define RCCHECK(fn)                                                                                                    \
     {                                                                                                                  \
@@ -49,17 +52,23 @@ void MicroROSClient::run() {
                                         ROSIDL_GET_MSG_TYPE_SUPPORT(vision_msgs, msg, Detection3DArray),
                                         "detected_objects"));
 
+    RCCHECK(rclc_service_init_default(&detectionRequestSrv_, &node_,
+                                      ROSIDL_GET_SRV_TYPE_SUPPORT(std_srvs, srv, SetBool), "downwards_camera/mode"));
+
     // create timer to ping the agent twice a second
     // Periodically pings the agent to make sure the connection is still alive
     RCCHECK(rclc_timer_init_default(&pingTimer_, &support_, RCL_MS_TO_NS(500), ping_timer_callback));
 
     // create executor
     executor_ = rclc_executor_get_zero_initialized_executor();
-    RCCHECK(rclc_executor_init(&executor_, &support_.context, 1, &allocator_));
+    RCCHECK(rclc_executor_init(&executor_, &support_.context, 2, &allocator_));
     RCCHECK(rclc_executor_add_timer(&executor_, &pingTimer_));
+    RCCHECK(rclc_executor_add_service(&executor_, &detectionRequestSrv_, &detectionSrvReq_, &detectionSrvRsp_,
+                                      detection_request_callback));
 
     while (true) {
         rclc_executor_spin_some(&executor_, RCL_MS_TO_NS(10));
+        handleQueuedDetections();
     }
 }
 
@@ -73,66 +82,132 @@ static inline builtin_interfaces__msg__Time timespecToRosTime(const timespec &ts
     return time;
 }
 
-void MicroROSClient::reportDetection(const CameraDetection &detection) {
-    std::lock_guard<std::mutex> lk(detectionQueueMutex);
-    detectionQueue.push_back(detection);
+bool MicroROSClient::getDetectionsEnabled(int &targetClassId) {
+    std::lock_guard<std::mutex> lk(requestedModeMutex_);
+    if (modeProcessedPromise_ != nullptr) {
+        modeProcessedPromise_->set_value(true);
+        modeProcessedPromise_.reset();
+    }
+    if (detectionsEnabled_) {
+        targetClassId = targetClassId_;
+    }
+    return detectionsEnabled_;
+}
+
+bool MicroROSClient::setRequestedMode(bool enabled, int targetClassId) {
+    std::future<bool> fut;
+    {
+        std::lock_guard<std::mutex> lk(requestedModeMutex_);
+        detectionsEnabled_ = enabled;
+        targetClassId_ = targetClassId;
+        modeProcessedPromise_ = std::make_unique<std::promise<bool>>();
+        fut = modeProcessedPromise_->get_future();
+    }
+
+    // Wait until the future is fulfilled (the camera process thread fetches the enabled value again)
+    return fut.get();
+}
+
+void MicroROSClient::reportDetections(const timespec &timestamp, const std::vector<CameraDetection> &detections) {
+    std::lock_guard<std::mutex> lk(detectionQueueMutex_);
+    detectionQueue_.emplace_back(timestamp, detections);
 }
 
 void MicroROSClient::handleQueuedDetections() {
-    // Keep looping until we run out of detected objects (need to check under lock though)
-    while (true) {
-        CameraDetection dfcDetection;
+    // Keep looping until we either fail or run out of objects (that check must be under lock though)
+    rcl_ret_t ret = RCL_RET_OK;
+    while (ret == RCL_RET_OK) {
+        // Needs to be pointer since we can't declare a null reference
+        DetectionMsg *nextMsg = nullptr;
         {
-            std::lock_guard<std::mutex> lk(detectionQueueMutex);
-            if (detectionQueue.empty()) {
+            std::lock_guard<std::mutex> lk(detectionQueueMutex_);
+            if (detectionQueue_.empty()) {
                 // No detected objects, exit
                 return;
             }
             // We have something, grab it
-            dfcDetection = detectionQueue.at(0);
-            detectionQueue.pop_front();
+            nextMsg = &detectionQueue_.at(0);
+            // It's safe to not remove it yet since this is the only thing reading from the queue
+            // We will remove it once we're done (to avoid excess copying)
         }
 
-        // Now publish while not under lock
+        // Publish while not under lock
         vision_msgs__msg__Detection3DArray detections = {};
         detections.header.frame_id = stringToRosStr(inst->cameraFrame_);
-        detections.header.stamp = timespecToRosTime(dfcDetection.ts);
+        detections.header.stamp = timespecToRosTime(nextMsg->ts);
 
-        vision_msgs__msg__Detection3D detectionEntry = {};
-        detectionEntry.header.frame_id = stringToRosStr(inst->cameraFrame_);
-        detectionEntry.header.stamp = timespecToRosTime(dfcDetection.ts);
+        // Copy all the reported detections into an array
+        std::vector<vision_msgs__msg__Detection3D> detectionArr(nextMsg->detections.size());
+        std::vector<vision_msgs__msg__ObjectHypothesisWithPose> hypothesisArr(nextMsg->detections.size());
+        for (int i = 0; i < detectionArr.size(); i++) {
+            auto &detInfo = nextMsg->detections.at(i);
+            auto &hypothesis = hypothesisArr.at(i);
+            auto &detOut = detectionArr.at(i);
 
-        vision_msgs__msg__ObjectHypothesisWithPose hypothesis = {};
-        hypothesis.hypothesis.class_id = stringToRosStr(dfcDetection.classId);
-        hypothesis.hypothesis.score = dfcDetection.score;
-        hypothesis.pose = dfcDetection.pose;
+            detOut.header.frame_id = stringToRosStr(inst->cameraFrame_);
+            detOut.header.stamp = timespecToRosTime(nextMsg->ts);
 
-        detectionEntry.results.data = &hypothesis;
-        detectionEntry.results.size = 1;
-        detectionEntry.results.capacity = 1;
+            hypothesis.hypothesis.class_id = stringToRosStr(detInfo.classId);
+            hypothesis.hypothesis.score = detInfo.score;
+            hypothesis.pose = detInfo.pose;
 
-        detections.detections.data = &detectionEntry;
-        detections.detections.size = 1;
-        detections.detections.capacity = 1;
+            detOut.results.data = &hypothesis;
+            detOut.results.size = 1;
+            detOut.results.capacity = 1;
+        }
 
-        rcl_ret_t ret = rcl_publish(&detectedObjsPub_, &detections, NULL);
-        if (ret != RCL_RET_OK) {
-            std::cerr << "Failed to publish detection! rcl_publish failed with error code: " << ret << std::endl;
-            // If we fail to publish, bail now so we don't run into issues where we stall in publish too long, we get
-            // another detection, and we never end up breaking out of this loop
-            return;
+        // Assign array to message
+        detections.detections.data = detectionArr.data();
+        detections.detections.size = detectionArr.size();
+        detections.detections.capacity = detectionArr.size();
+
+        ret = rcl_publish(&detectedObjsPub_, &detections, NULL);
+
+        {
+            // Finally remove the item we processed back under lock
+            // Again, this is safe since we're the only one popping from the queue, and it avoid lots of copying
+            std::lock_guard<std::mutex> lk(detectionQueueMutex_);
+            detectionQueue_.pop_front();
         }
     }
+
+    // If we fail to publish, bail now so we don't run into issues where we stall in publish too long, we
+    // get another detection, and we never end up breaking out of this loop
+    std::cerr << "Failed to publish detection! rcl_publish failed with error code: " << ret << std::endl;
 }
 
 void MicroROSClient::ping_timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
     (void) last_call_time;
 
     if (timer != NULL) {
-        rmw_ret_t ret = rmw_uros_ping_agent(100, 5);
+        rmw_ret_t ret = rmw_uros_ping_agent(AGENT_KEEPALIVE_TIMEOUT_MS, AGENT_KEEPING_PING_ATTEMPTS);
         if (ret != RMW_RET_OK) {
             std::cerr << "Agent Disconnected! Exiting!" << std::endl;
             exit(1);
         }
     }
+}
+
+void MicroROSClient::detection_request_callback(const void *request_msg, void *response_msg) {
+    std_srvs__srv__SetBool_Request *req_in = (std_srvs__srv__SetBool_Request *) request_msg;
+    std_srvs__srv__SetBool_Response *res_in = (std_srvs__srv__SetBool_Response *) response_msg;
+
+    // TODO: Actually pass the real class ID
+    bool enable = req_in->data;
+    int targetClassId = 0;
+
+    if (enable) {
+        std::cout << "Enabling Detections of Class " << targetClassId << std::endl;
+    }
+    else {
+        std::cout << "Disabling Detections" << std::endl;
+    }
+
+    bool successful = inst->setRequestedMode(enable, targetClassId);
+
+    // Always Successful
+    res_in->success = successful;
+    res_in->message.data = NULL;
+    res_in->message.size = 0;
+    res_in->message.capacity = 0;
 }
