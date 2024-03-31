@@ -46,6 +46,8 @@ public:
 
     // ===Thread Safe Functions to be called from camera thread===
     bool getDetectionsEnabled(int &targetClassId);
+    // The following functions must not be called until getDetectionsEnabled returns true:
+    timespec getAgentTime();
     void reportDetections(const timespec &timestamp, const std::vector<CameraDetection> &detections);
 
 private:

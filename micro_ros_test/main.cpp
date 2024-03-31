@@ -17,10 +17,7 @@ void testThread(MicroROSClient &client) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             // This timestamp should be taken when the camera is triggered
-            timespec ts;
-            if (clock_gettime(CLOCK_REALTIME, &ts)) {
-                throw std::system_error(errno, std::generic_category(), "clock_gettime");
-            }
+            timespec ts = client.getAgentTime();
 
             // Publish detection
             CameraDetection detection;

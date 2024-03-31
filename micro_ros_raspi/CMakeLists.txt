@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
 
-set(REPO_DIR /home/rjp5th/osu-uwrt/development/titan_firmware)
-
 # Define sources
 add_library(micro_ros INTERFACE)
 target_sources(micro_ros INTERFACE

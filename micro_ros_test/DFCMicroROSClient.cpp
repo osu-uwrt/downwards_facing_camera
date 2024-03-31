@@ -12,6 +12,8 @@
 #include <time.h>
 
 #define AGENT_PING_TIMEOUT_MS 2000
+#define AGENT_TIMESYNC_TIMEOUT_MS 1000
+#define AGENT_TIMESYNC_INTERVAL_MINUTES 5
 #define AGENT_KEEPALIVE_TIMEOUT_MS 100
 #define AGENT_KEEPING_PING_ATTEMPTS 5
 
@@ -66,9 +68,22 @@ void MicroROSClient::run() {
     RCCHECK(rclc_executor_add_service(&executor_, &detectionRequestSrv_, &detectionSrvReq_, &detectionSrvRsp_,
                                       detection_request_callback));
 
+    // Synchronize time with the agent
+    RCCHECK(rmw_uros_sync_session(AGENT_TIMESYNC_TIMEOUT_MS));
+
+    std::chrono::time_point<std::chrono::steady_clock> nextSync =
+        std::chrono::steady_clock::now() + std::chrono::minutes(AGENT_TIMESYNC_INTERVAL_MINUTES);
+
     while (true) {
         rclc_executor_spin_some(&executor_, RCL_MS_TO_NS(10));
         handleQueuedDetections();
+
+        // If we need to synchronize again, do so
+        if (nextSync < std::chrono::steady_clock::now()) {
+            std::cout << "Resynchronizing time" << std::endl;
+            RCCHECK(rmw_uros_sync_session(AGENT_TIMESYNC_TIMEOUT_MS));
+            nextSync = std::chrono::steady_clock::now() + std::chrono::minutes(AGENT_TIMESYNC_INTERVAL_MINUTES);
+        }
     }
 }
 
@@ -106,6 +121,19 @@ bool MicroROSClient::setRequestedMode(bool enabled, int targetClassId) {
 
     // Wait until the future is fulfilled (the camera process thread fetches the enabled value again)
     return fut.get();
+}
+
+timespec MicroROSClient::getAgentTime() {
+    int64_t time_ns = rmw_uros_epoch_nanos();
+    if (time_ns == 0) {
+        throw std::logic_error("Attempting to retreive agent time before client reported detections enabled (client "
+                               "not yet connected to agent)");
+    }
+
+    timespec ts;
+    ts.tv_sec = time_ns / 1000000000;
+    ts.tv_nsec = time_ns % 1000000000;
+    return ts;
 }
 
 void MicroROSClient::reportDetections(const timespec &timestamp, const std::vector<CameraDetection> &detections) {
