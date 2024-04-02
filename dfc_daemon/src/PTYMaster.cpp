@@ -134,15 +134,15 @@ CanmoreTTYServer::CanmoreTTYServer(int ifIndex, uint8_t clientId, const std::str
     struct winsize winp = {};
     winp.ws_row = initialRows;
     winp.ws_col = initialCols;
-    childPid_ = forkpty(&ptyMasterFd_, NULL, NULL, &winp);
+    int childPid = forkpty(&ptyMasterFd_, NULL, NULL, &winp);
 
-    if (childPid_ < 0) {
+    if (childPid < 0) {
         sigchldUnblock();
         close(sigchldEventFd_);
         throw std::system_error(errno, std::generic_category(), "forkpty");
     }
 
-    if (childPid_ == 0) {
+    if (childPid == 0) {
         // We are the child
 
         // Load information about who we're running as so we can spawn them a shell
@@ -173,6 +173,12 @@ CanmoreTTYServer::CanmoreTTYServer(int ifIndex, uint8_t clientId, const std::str
         char *loginshell = strdup(pwdent->pw_shell);
         endpwent();
 
+        // Copy the lang environment variable (needed since we clear the environment)
+        // Used to pass on locale info to the child process
+        char *currentlang = getenv("LANG");
+        if (currentlang != NULL)
+            currentlang = strdup(currentlang);
+
         // Clear the system environment to a fresh one
         cerrchk(clearenv());
 
@@ -191,7 +197,8 @@ CanmoreTTYServer::CanmoreTTYServer(int ifIndex, uint8_t clientId, const std::str
         cerrchk(setenv("LOGNAME", username, true));
         cerrchk(setenv("HOME", homedir, true));
         cerrchk(setenv("SHELL", loginshell, true));
-        cerrchk(setenv("LANG", "en_US.UTF-8", true));
+        if (currentlang != NULL)
+            cerrchk(setenv("LANG", currentlang, true));
 
         // Set the terminal environment variable
         if (!termEnv.empty()) {
@@ -224,8 +231,11 @@ CanmoreTTYServer::CanmoreTTYServer(int ifIndex, uint8_t clientId, const std::str
         _exit(1);
     }
 
-    // Add the childpid to the active children map
-    activeChildren.emplace(childPid_, this);
+    // Save this child pid as owned by this class
+    childPid_ = childPid;
+
+    // Add the childpid to the static active children map referring to this instance
+    activeChildren.emplace(childPid, this);
 
     // It should now be safe to re-enable the sigchld
     sigchldUnblock();
