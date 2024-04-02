@@ -12,6 +12,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
 # Add Canmore CPP Core Libraries
+set(NO_AMENT 1)
 add_subdirectory(${REPO_DIR}/titan_canmore titan_canmore EXCLUDE_FROM_ALL)
 
 # Find threading support
