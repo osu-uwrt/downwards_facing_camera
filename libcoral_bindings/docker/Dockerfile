@@ -55,11 +55,5 @@ RUN wget -O /bazel https://github.com/bazelbuild/bazel/releases/download/4.0.0/b
     git submodule init && \
     git submodule update --depth 1 libedgetpu
 
-RUN cd / \
-    git clone -b 4.9.0 https://github.com/opencv/opencv.git \
-    git clone -b 4.9.0 https://github.com/opencv/opencv_contrib.git \
-    mkdir opencv_build  && cd opencv_build \
-    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_TBB=ON -DWITH_LAPACK=ON -DENABLE_NEON=ON -DBUILD_TESTS=OFF -DINSTALL_C_EXAMPLES=OFF -DINSTALL_PYTHON_EXAMPLES=OFF -DBUILD_EXAMPLES=OFF -DOPENCV_EXTRA_MODULES_PATH=/opencv_contrib/modules -DCMAKE_CXX_STANDARD=17 /opencv
-
 # Precompile libcoral so the docker compiles will be fast
 RUN cd /libcoral && make CPU=aarch64 examples

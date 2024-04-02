@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.12)
 
+if(NOT EXISTS "${MICRO_ROS_DIR}/libmicroros" OR NOT EXISTS "${MICRO_ROS_DIR}/libmicroros/libmicroros.a" OR NOT EXISTS "${MICRO_ROS_DIR}/libmicroros/include")
+    message(FATAL_ERROR "Could not locate prebuilt libmicroros install!\n"
+            "Please clone this repository on a machine with docker and run the ./build.sh command. Then transfer the "
+            "resulting 'libmicroros_aarch64.tgz' to this machine and run the ./extract_crosscompile.sh command.")
+endif()
+
 # Define sources
 add_library(micro_ros INTERFACE)
 target_sources(micro_ros INTERFACE

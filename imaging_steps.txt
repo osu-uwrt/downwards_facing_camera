@@ -1,0 +1,77 @@
+Imaging Steps:
+ - Flash Raspberry Pi OS Lite (64 bit) image using Raspberry Pi Imager
+   - Edit settings:
+     - Hostname: dfc-pi
+     - Username: pi
+     - Password: <Standard>
+     - Set locale settings to system
+     - Enable SSH
+ - Install Packages:
+  - build-essential
+  - cmake
+  - libsystemd-dev
+  - libcamera-dev
+  - libjpeg62-turbo-dev
+ - Install Docker (only needed if running micro ros):
+   - Follow https://docs.docker.com/engine/install/debian/
+   - Add user pi to docker group
+ - Clone files:
+   - Mkdir osu-uwrt
+   - Clone repo into directory
+   - Init submodules
+   -
+ - Need to transfer libcoral.so to directory
+ - Build Opencv
+
+mkdir opencv_build
+cd opencv_build
+git clone --depth 1 -b 4.9.0 https://github.com/opencv/opencv.git
+git clone --depth 1 -b 4.9.0 https://github.com/opencv/opencv_contrib.git
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_TBB=ON -DWITH_LAPACK=ON -DENABLE_NEON=ON -DBUILD_TESTS=OFF -DINSTALL_C_EXAMPLES=OFF -DINSTALL_PYTHON_EXAMPLES=OFF -DBUILD_EXAMPLES=OFF -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules -DCMAKE_CXX_STANDARD=17  ../opencv
+make -j4
+sudo make install
+cd ..
+git clone https://github.com/kbarni/LCCV
+cd LCCV
+mkdir build
+cd build
+cmake ..
+make -j4
+sudo make install
+
+ - Build microros agent
+   - Run ./build.sh
+ - Install EdgeTPU Drivers
+
+# Compile kernel driver
+mkdir coral_driver
+cd coral_driver
+sudo apt install git dh-dkms dkms devscripts
+git clone https://github.com/google/gasket-driver.git
+cd gasket-driver
+debuild -us -uc -tc -b
+cd ..
+sudo dpkg -i gasket-dkms_1.0-18_all.deb
+
+# Add user access to driver
+sudo sh -c "echo 'SUBSYSTEM==\"apex\", MODE=\"0660\", GROUP=\"apex\"' >> /etc/udev/rules.d/65-apex.rules"
+sudo -r groupadd apex
+sudo adduser $USER apex
+
+# Go to kernel with 4kb page sizes
+echo "kernel=kernel8.img" | sudo tee -a /boot/firmware/config.txt
+# Fix device tree for interrupts
+sudo cp /boot/firmware/bcm2712-rpi-5-b.dtb /boot/firmware/bcm2712-rpi-5-b.dtb.bak
+dtc -I dtb -O dts /boot/firmware/bcm2712-rpi-5-b.dtb -o ~/test.dts
+sed -i '/pcie@110000 {/,/msi-parent = <0x2[fc]>;/{s/<0x2f>/<0x67>/; s/<0x2c>/<0x67>/}' ~/test.dts
+dtc -I dts -O dtb ~/test.dts -o ~/test.dtb
+sudo mv ~/test.dtb /boot/firmware/bcm2712-rpi-5-b.dtb
+rm test.dts
+# Fix power mode settings (fixes RAM did not enable within timeout errors)
+echo "options vfio-pci ids=1ac1:089a disable_idle_d3=1" | sudo tee /etc/modprobe.d/tpu.conf
+
+sudo shutdown -r now
+
+TODO: Configure the other hat peripherals (should probably be done through device tree overlay rather than config stuff)

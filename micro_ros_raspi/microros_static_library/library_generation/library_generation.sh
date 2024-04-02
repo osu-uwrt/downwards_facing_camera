@@ -5,6 +5,19 @@ set -e
 apt update
 apt -y install rsync
 
+######## Configure Cross Compile ########
+
+# Note from author: If you want to compile it for your local machine,
+# you can comment out this out and it'll happily make an x86 build
+if [ "$(uname -m)" != "aarch64" ]; then
+    echo "Detected running on non-aarch64 machine: performing cross compile"
+    export UROS_RPI_CROSS_COMPILE=1
+    export DEST_DIR=/output_staging
+    mkdir "$DEST_DIR"
+else
+    export DEST_DIR=/project
+fi
+
 ######## Init ########
 
 cd /uros_ws
@@ -42,23 +55,25 @@ pushd firmware/mcu_ws > /dev/null
 popd > /dev/null
 
 ######## Clean old builds ########
-rm -rf /project/libmicroros/include
-rm -f /project/libmicroros/libmicroros.a
-rm -f /project/built_packages
-rm -f /project/available_ros2_types
+rm -rf "$DEST_DIR/libmicroros/include"
+rm -f "$DEST_DIR/libmicroros/libmicroros.a"
+rm -f "$DEST_DIR/built_packages"
+rm -f "$DEST_DIR/available_ros2_types"
 
 ######## Build for Raspberry Pi 5  ########
 rm -rf firmware/build
 
-# apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+if [ $UROS_RPI_CROSS_COMPILE ]; then
+    apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libgcc-11-dev-arm64-cross
+fi
 
 ros2 run micro_ros_setup build_firmware.sh /project/microros_static_library/library_generation/toolchain.cmake /project/microros_static_library/library_generation/colcon.meta
 
 find firmware/build/include/ -name "*.c"  -delete
-mkdir -p /project/libmicroros/include
-cp -R firmware/build/include/* /project/libmicroros/include
+mkdir -p "$DEST_DIR/libmicroros/include"
+cp -R firmware/build/include/* "$DEST_DIR/libmicroros/include"
 
-cp firmware/build/libmicroros.a /project/libmicroros/libmicroros.a
+cp firmware/build/libmicroros.a "$DEST_DIR/libmicroros/libmicroros.a"
 
 ######## Fix include paths  ########
 pushd firmware/mcu_ws > /dev/null
@@ -66,26 +81,30 @@ pushd firmware/mcu_ws > /dev/null
 popd > /dev/null
 
 for var in ${INCLUDE_ROS2_PACKAGES}; do
-    if [ -d "/project/libmicroros/include/${var}/${var}" ]; then
-        rsync -r /project/libmicroros/include/${var}/${var}/* /project/libmicroros/include/${var}
-        rm -rf /project/libmicroros/include/${var}/${var}
+    if [ -d "$DEST_DIR/libmicroros/include/${var}/${var}" ]; then
+        rsync -r $DEST_DIR/libmicroros/include/${var}/${var}/* "$DEST_DIR/libmicroros/include/${var}"
+        rm -rf "$DEST_DIR/libmicroros/include/${var}/${var}"
     fi
 done
 
 ######## Generate extra files ########
-find firmware/mcu_ws/ros2 \( -name "*.srv" -o -name "*.msg" -o -name "*.action" \) | awk -F"/" '{print $(NF-2)"/"$NF}' > /project/available_ros2_types
-find firmware/mcu_ws/extra_packages \( -name "*.srv" -o -name "*.msg" -o -name "*.action" \) | awk -F"/" '{print $(NF-2)"/"$NF}' >> /project/available_ros2_types
+find firmware/mcu_ws/ros2 \( -name "*.srv" -o -name "*.msg" -o -name "*.action" \) | awk -F"/" '{print $(NF-2)"/"$NF}' > "$DEST_DIR/available_ros2_types"
+find firmware/mcu_ws/extra_packages \( -name "*.srv" -o -name "*.msg" -o -name "*.action" \) | awk -F"/" '{print $(NF-2)"/"$NF}' >> "$DEST_DIR/available_ros2_types"
 
 cd firmware
-echo "" > /project/built_packages
-for f in $(find $(pwd) -name .git -type d); do pushd $f > /dev/null; echo $(git config --get remote.origin.url) $(git rev-parse HEAD) >> /project/built_packages; popd > /dev/null; done;
+echo "" > "$DEST_DIR/built_packages"
+for f in $(find $(pwd) -name .git -type d); do pushd $f > /dev/null; echo $(git config --get remote.origin.url) $(git rev-parse HEAD) >> "$DEST_DIR/built_packages"; popd > /dev/null; done;
 # sort it so that the result order is reproducible
-sort -o /project/built_packages /project/built_packages
+sort -o "$DEST_DIR/built_packages" "$DEST_DIR/built_packages"
 
 ######## Fix permissions ########
-sudo chmod -R 777 /project/microros_static_library
-sudo chmod -R -x+X /project/microros_static_library
-sudo chmod +x /project/microros_static_library/library_generation/library_generation.sh
+if [ "$DEST_DIR" == "/project" ]; then
+    chmod -R 777 /project/libmicroros
+    chmod -R -x+X /project/libmicroros
+else
+    # We aren't running in /project, archive it into the project directory
+    tar -C "$DEST_DIR" -c -z -f /project/libmicroros_aarch64.tgz .
+fi
 
 echo
 echo ========================================
