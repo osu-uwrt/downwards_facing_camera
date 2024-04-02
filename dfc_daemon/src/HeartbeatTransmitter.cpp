@@ -35,33 +35,34 @@ void HeartbeatTransmitter::start() {
     const static size_t num_frames = 1 << CANMORE_HEARTBEAT_CNT_LENGTH;
 
     // Message Struct Foramt
-    struct {
-        struct bcm_msg_head msg_head;
-        struct can_frame frame[num_frames];
-    } heartbeat_msg = {};
+    size_t heartbeat_msg_size = sizeof(bcm_msg_head) + num_frames * sizeof(can_frame);
+    bcm_msg_head *heartbeat_msg = (bcm_msg_head *) malloc(heartbeat_msg_size);
+    memset(heartbeat_msg, 0, heartbeat_msg_size);
 
     // Configure the repeating message
     // Will transmit every heartbeat interval, looping through all the frame indices
-    heartbeat_msg.msg_head.opcode = TX_SETUP;
-    heartbeat_msg.msg_head.flags = SETTIMER | STARTTIMER;
-    heartbeat_msg.msg_head.count = 0;
-    heartbeat_msg.msg_head.ival1 = { .tv_sec = 0, .tv_usec = 0 };
-    heartbeat_msg.msg_head.ival2 = { .tv_sec = CANMORE_HEARTBEAT_INTERVAL_MS / 1000,
-                                     .tv_usec = CANMORE_HEARTBEAT_INTERVAL_MS * 1000 };
-    heartbeat_msg.msg_head.can_id = CANMORE_CALC_UTIL_ID_C2A(clientId, CANMORE_CHAN_HEARTBEAT);
-    heartbeat_msg.msg_head.nframes = num_frames;
+    heartbeat_msg->opcode = TX_SETUP;
+    heartbeat_msg->flags = SETTIMER | STARTTIMER;
+    heartbeat_msg->count = 0;
+    heartbeat_msg->ival1 = { .tv_sec = 0, .tv_usec = 0 };
+    heartbeat_msg->ival2 = { .tv_sec = CANMORE_HEARTBEAT_INTERVAL_MS / 1000,
+                             .tv_usec = CANMORE_HEARTBEAT_INTERVAL_MS * 1000 };
+    heartbeat_msg->can_id = CANMORE_CALC_UTIL_ID_C2A(clientId, CANMORE_CHAN_HEARTBEAT);
+    heartbeat_msg->nframes = num_frames;
 
     // Fill out heartbeat messages for each frame count
     for (size_t i = 0; i < num_frames; i++) {
-        heartbeat_msg.frame[i].can_id = CANMORE_CALC_UTIL_ID_C2A(clientId, CANMORE_CHAN_HEARTBEAT);
-        heartbeat_msg.frame[i].can_dlc = 1;
-        heartbeat_msg.frame[i].data[0] =
+        heartbeat_msg->frames[i].can_id = CANMORE_CALC_UTIL_ID_C2A(clientId, CANMORE_CHAN_HEARTBEAT);
+        heartbeat_msg->frames[i].can_dlc = 1;
+        heartbeat_msg->frames[i].data[0] =
             CANMORE_CALC_TITAN_HEARTBEAT_DATA(i, 0, CANMORE_CONTROL_INTERFACE_MODE_LINUX, 0, 0);
     }
 
-    if (write(socketFd, &heartbeat_msg, sizeof(heartbeat_msg)) < 0) {
+    if (write(socketFd, heartbeat_msg, heartbeat_msg_size) < 0) {
+        free(heartbeat_msg);
         throw std::system_error(errno, std::generic_category(), "BCM write");
     }
+    free(heartbeat_msg);
 }
 
 HeartbeatTransmitter::~HeartbeatTransmitter() {
