@@ -1,0 +1,168 @@
+/dts-v1/;
+/plugin/;
+
+/{
+    compatible = "brcm,bcm2712";
+
+    // Define any extra GPIO pinctrl definitions that aren't already provided by Raspberry Pi
+    fragment@0 {
+        target = <&rp1_gpio>;
+        __overlay__ {
+            // Define 1 pin cs mode
+            rp1_spi0_cs_gpio8_1cs: rp1_spi0_cs_gpio8_1cs {
+                function = "spi0";
+                pins = "gpio8";
+                bias-pull-up;
+            };
+
+            // Define uart 4 tx only configuration (since raspberry pi doesn't make one of these in their tree by default
+            rp1_uart4_12_tx_only: rp1_uart4_12_tx_only {
+                pin_txd {
+                    function = "uart4";
+                    pins = "gpio12";
+                    bias-disable;
+                };
+            };
+
+            // Define the interrupt pin for the MCP251xFD
+            mcp251xfd_pins: mcp251xfd_pins {
+                function = "gpio";
+                pins = "gpio7";
+                input-enable;
+                bias-pull-up;
+            };
+        };
+    };
+
+    // Define the fixed clock we have on the External Camera HAT
+    fragment@1 {
+        target-path = "/clocks";
+        __overlay__ {
+            clk_mcp251xfd_osc: mcp251xfd-osc {
+                #clock-cells = <0>;
+                compatible = "fixed-clock";
+                clock-frequency = <20000000>;
+            };
+        };
+    };
+
+    // Define spi0 for CAN bus
+    fragment@2 {
+        target = <&spi0>;
+        __overlay__ {
+            // Enable spi0
+            status = "okay";
+            #address-cells = <1>;
+            #size-cells = <0>;
+
+            // Redefine pinctrl to use our new only 1 cs port (rather than the 2 by default)
+            pinctrl-0 = <&spi0_pins &rp1_spi0_cs_gpio8_1cs>;
+            cs-gpios = <&gpio 8 1>;
+
+            // Define the MCP2517FD CAN controller on the bus
+            mcp251xfd: mcp251xfd@0 {
+                compatible = "microchip,mcp251xfd";
+                reg = <0>;
+                pinctrl-names = "default";
+                pinctrl-0 = <&mcp251xfd_pins>;
+                spi-max-frequency = <20000000>;
+                interrupt-parent = <&gpio>;
+                interrupts = <7 8>;     // Pin 7, IRQ_TYPE_LEVEL_LOW
+                clocks = <&clk_mcp251xfd_osc>;
+            };
+
+        };
+    };
+
+    // Disable spidev0 (since we are directly creating the mcp251xfd on this chip select)
+    fragment@3 {
+        target = <&spidev0>;
+        __overlay__ {
+            status = "disabled";
+        };
+    };
+    // Disable spidev1 (since we disabled the cs1 pin)
+    fragment@4 {
+        target = <&spidev1>;
+        __overlay__ {
+            status = "disabled";
+        };
+    };
+
+    // Enable i2c1 bus for sht41 & M.2 connector
+    fragment@5 {
+        target = <&i2c1>;
+        __overlay__ {
+            // Enable the i2c bus (all devices have 1 word address, no address length, cuz i2c)
+            #address-cells = <1>;
+            #size-cells = <0>;
+            status = "okay";
+
+            // Run i2c at 100 kHz
+            clock-frequency = <100000>;
+
+            // Pinmux GPIO 2 & 3 to the i2c1 hardware block
+            pinctrl-0 = <&rp1_i2c1_2_3>;
+
+            // We have 1 device on the i2c bus (M.2 also connects, but it can add its own device tree) The sht4x temperature sensor (Address 0x44)
+            sht4x: sht4x@44 {
+                compatible = "sensirion,sht4x";
+                reg = <0x44>;
+                status = "okay";
+            };
+
+        };
+    };
+
+    // Enable uart4 (TX only) for sending camera triggers using pin map defined above
+    fragment@6 {
+        target = <&uart4>;
+        __overlay__ {
+            status = "okay";
+            pinctrl-0 = <&rp1_uart4_12_tx_only>;
+        };
+    };
+
+    // This configures the various quirks to get the coral working over PCIe
+    // More info can be found here: https://www.jeffgeerling.com/blog/2023/pcie-coral-tpu-finally-works-on-raspberry-pi-5
+    // I just took his instructions and translated (almost all) into a device tree overlay so it can be autoloaded by the HAT
+    fragment@7 {
+        target = <&pciex1>;
+        __overlay__ {
+            // Enable External PCIe x1 lane
+            status = "okay";
+
+            // Switch pcie msi parent from mip1 to pcie1 so we have enough interrupts to run the coral
+            // Not 100% sure how all this works, but I'm following what the Raspi Engineer says: https://forums.raspberrypi.com/viewtopic.php?p=2157674#p2157674
+            msi-parent = <&pciex1>;
+
+            // Also disable PCIe ASPM since the Coral will break if it enters sleep mode
+            aspm-no-l0s;
+        };
+    };
+
+    // This enables uart0 for use by the M.2 slot
+    fragment@8 {
+        target = <&uart0>;
+        __overlay__ {
+            status = "okay";
+            pinctrl-0 = <&uart0_pins &uart0_ctsrts_pins>;
+        };
+    };
+
+    // This enables SDIO for use by the M.2 slot
+    fragment@9 {
+        target = <&rp1_mmc0>;
+        __overlay__ {
+            status = "okay";
+            pinctrl-0 = <&rp1_sdio0_22_27>;
+            pinctrl-names = "default";
+        };
+    };
+    fragment@10 {
+        target = <&rp1_sdio_clk0>;
+        frag1: __overlay__ {
+            status = "okay";
+        };
+    };
+};

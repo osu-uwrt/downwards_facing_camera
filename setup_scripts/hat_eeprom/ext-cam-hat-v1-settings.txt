@@ -1,0 +1,54 @@
+########################################################################
+# EEPROM settings text file (For v1 HATs)
+#
+# Edit this file for your particular board and run through eepmake tool,
+# then use eepflash tool to write to attached HAT ID EEPROM
+#
+# See README for more info
+#
+########################################################################
+
+########################################################################
+# Vendor info
+
+# 128 bit UUID. If left at zero eepmake tool will auto-generate
+# RFC 4122 compliant UUID
+product_uuid 28b715d5-721b-40b0-a140-21af7be16247
+
+# 16 bit product id (unused, set to 0)
+product_id 0x0000
+
+# 16 bit product version (unused, set to 0)
+product_ver 0x0000
+
+# ASCII vendor string  (max 255 characters)
+vendor "The Ohio State University - Underwater Robotics Team"
+
+# ASCII product string (max 255 characters)
+product "External Camera HAT (Rev 1.0)"
+
+
+########################################################################
+# GPIO Settings
+# Leave pretty much all at default (except backpower)
+
+# drive strength, 0=default, 1-8=2,4,6,8,10,12,14,16mA, 9-15=reserved
+gpio_drive 0
+
+# 0=default, 1=slew rate limiting, 2=no slew limiting, 3=reserved
+gpio_slew 0
+
+# 0=default, 1=hysteresis disabled, 2=hysteresis enabled, 3=reserved
+gpio_hysteresis 0
+
+# If board back-powers Pi via 5V GPIO header pins:
+# 0 = board does not back-power
+# 1 = board back-powers and can supply the Pi with a minimum of 1.3A
+# 2 = board back-powers and can supply the Pi with a minimum of 2A
+# 3 = reserved
+# If back_power=2 then USB high current mode will be automatically
+# enabled on the Pi
+
+# We can provide up to 5A (the HAT+ spec hasn't been fully released yet with details on setting
+# information, and we can't do HAT+ anyways, so we'll just fall back to this)
+back_power 2

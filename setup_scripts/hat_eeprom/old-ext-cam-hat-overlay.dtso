@@ -1,0 +1,64 @@
+/dts-v1/;
+/plugin/;
+
+// Note this file was SUPPOSED to be used (so we could rely on raspberry pi stuff)
+// HOWEVER, Raspberry Pi doesn't let you instantiate mutliple device tree overlays,
+// (even though the HAT+ specification says that's the only way now).
+// So, for our sake, we'll just copy all of these into our file and just run the mega overlay
+// But, if that ever changes, this is a cleaner implementation of the EEPROM
+
+// Additional Overlays to Load on top of this one
+// dtoverlay=spi0-1cs,cs0_pin=8
+// dtoverlay=mcp251xfd,spi0-0,oscillator=20000000,interrupt=7
+// dtoverlay=i2c-sensor,sht4x
+// dtoverlay=uart0,ctsrts
+// dtoverlay=sdio
+
+/{
+    compatible = "brcm,bcm2712";
+
+    // This overlay creates a UART4 instance that is transmit only
+    // We need to make our own since Raspi's only let you create UART4 with both tx and rx
+    // However, we have assigned the RX pin to something else, so we can't use raspi's builtin overlay
+
+    // Define uart 4 tx only pinmap configuration in the RP1 gpio node
+    fragment@0 {
+        target = <&rp1_gpio>;
+        __overlay__ {
+            rp1_uart4_12_tx_only: rp1_uart4_12_tx_only {
+                pin_txd {
+                    function = "uart4";
+                    pins = "gpio12";
+                    bias-disable;
+                };
+            };
+        };
+    };
+
+    // Enable uart4 (TX only) for sending camera triggers using pin map defined above
+    fragment@1 {
+        target = <&uart4>;
+        __overlay__ {
+            status = "okay";
+            pinctrl-0 = <&rp1_uart4_12_tx_only>;
+        };
+    };
+
+    // This configures the various quirks to get the coral working over PCIe
+    // More info can be found here: https://www.jeffgeerling.com/blog/2023/pcie-coral-tpu-finally-works-on-raspberry-pi-5
+    // I just took his instructions and translated (almost all) into a device tree overlay so it can be autoloaded by the HAT
+    fragment@2 {
+        target = <&pciex1>;
+        __overlay__ {
+            // Enable External PCIe x1 lane
+            status = "okay";
+
+            // Switch pcie msi parent from mip1 to pcie1 so we have enough interrupts to run the coral
+            // Not 100% sure how all this works, but I'm following what the Raspi Engineer says: https://forums.raspberrypi.com/viewtopic.php?p=2157674#p2157674
+            msi-parent = <&pciex1>;
+
+            // Also disable PCIe ASPM since the Coral will break if it enters sleep mode
+            aspm-no-l0s;
+        };
+    };
+};

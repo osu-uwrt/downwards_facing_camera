@@ -12,15 +12,19 @@ Imaging Steps:
   - libsystemd-dev
   - libcamera-dev
   - libjpeg62-turbo-dev
- - Install Docker (only needed if running micro ros):
-   - Follow https://docs.docker.com/engine/install/debian/
-   - Add user pi to docker group
+  - can-utils
+  - screen
  - Clone files:
    - Mkdir osu-uwrt
    - Clone repo into directory
    - Init submodules
-   -
+ - Setup dfc_daemon
+   - Build
+   - sudo make install
+   - sudo systemctl enable dfc_daemon@can0
  - Need to transfer libcoral.so to directory
+ - Need to transfer libmicroros_aarch64.tgz to directory
+   - run extract script
  - Build Opencv
 
 mkdir opencv_build
@@ -41,8 +45,7 @@ cmake ..
 make -j4
 sudo make install
 
- - Build microros agent
-   - Run ./build.sh
+
  - Install EdgeTPU Drivers
 
 # Compile kernel driver
@@ -60,18 +63,27 @@ sudo sh -c "echo 'SUBSYSTEM==\"apex\", MODE=\"0660\", GROUP=\"apex\"' >> /etc/ud
 sudo -r groupadd apex
 sudo adduser $USER apex
 
+# Make sure the device tree overlay is loaded
 # Go to kernel with 4kb page sizes
 echo "kernel=kernel8.img" | sudo tee -a /boot/firmware/config.txt
-# Fix device tree for interrupts
-sudo cp /boot/firmware/bcm2712-rpi-5-b.dtb /boot/firmware/bcm2712-rpi-5-b.dtb.bak
-dtc -I dtb -O dts /boot/firmware/bcm2712-rpi-5-b.dtb -o ~/test.dts
-sed -i '/pcie@110000 {/,/msi-parent = <0x2[fc]>;/{s/<0x2f>/<0x67>/; s/<0x2c>/<0x67>/}' ~/test.dts
-dtc -I dts -O dtb ~/test.dts -o ~/test.dtb
-sudo mv ~/test.dtb /boot/firmware/bcm2712-rpi-5-b.dtb
-rm test.dts
 # Fix power mode settings (fixes RAM did not enable within timeout errors)
 echo "options vfio-pci ids=1ac1:089a disable_idle_d3=1" | sudo tee /etc/modprobe.d/tpu.conf
 
 sudo shutdown -r now
 
 TODO: Configure the other hat peripherals (should probably be done through device tree overlay rather than config stuff)
+config.txt
+    kernel=kernel8.img
+
+/etc/network/interfaces.d/can0.conf
+auto can0
+iface can0 can static
+    qlen 64
+    bitrate 250000
+    berr-reporting on
+    fd on
+    dbitrate 2000000
+
+
+TODO: Build and install final application
+TODO: Enable watchdog
