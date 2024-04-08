@@ -1,0 +1,121 @@
+#include "lccv.hpp"
+#include "tools/mySerial.h"
+
+#include <chrono>
+#include <opencv2/calib3d.hpp>
+#include <opencv2/opencv.hpp>
+
+int totalImages = 39;
+
+std::vector<std::vector<cv::Point3f>> objPts;
+std::vector<std::vector<cv::Point2f>> imgPts;
+
+mySerial serialPort("/dev/ttyAMA0", 600);
+
+void sendSerial() {
+    serialPort.Send('\x00');
+}
+
+void createCamera(lccv::PiCamera &camera_, int id) {
+    camera_.options->camera = id;
+    camera_.options->video_width = 640;
+    camera_.options->video_height = 360;
+    camera_.options->framerate = 60;
+    // camera_.options->verbose = true;
+}
+
+int main(int argc, char *argv[]) {
+    lccv::PiCamera camera;
+    int camId;
+    if (argc == 2) {
+        camId = std::stoi(argv[1]);
+        if (camId == 0 || camId == 1) {
+            printf("Calibrating camera: %d", camId);
+        }
+        else {
+            printf("Invalid arguement: %d", camId);
+            return (0);
+        }
+    }
+    else {
+        camId = 0;
+        printf("No camera specified, defaulting to 0");
+    }
+    createCamera(camera, camId);
+    camera.startVideo();
+    // Need to fill up buffer (fairly sure why we need to do this, not entirely sure lmao)
+    for (int i = 0; i < 8; i++) {
+        sendSerial();
+    }
+
+    int keyPress = 0;
+
+    int i = 0;
+    int currentNum;
+    cv::Mat displayImage, image;
+
+
+    std::vector<cv::Point3f> objp;
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 6; j++) {
+            objp.push_back(cv::Point3f(j, i, 0));
+        }
+    }
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    while (i < totalImages) {
+        currentNum = 2;
+        while (currentNum > -1) {
+            sendSerial();
+            if (!camera.getVideoFrame(image, 99999999)) {
+                printf("Couldn't grab frame\n");
+                continue;
+            }
+            cv::cvtColor(image, image, cv::COLOR_RGB2GRAY);
+            image.copyTo(displayImage);
+            cv::putText(displayImage, std::to_string(currentNum), cv::Point2d(60, 0), cv::FONT_HERSHEY_PLAIN, 4,
+                        cv::Scalar(0, 255, 0), 5);
+            std::string progressText = std::to_string(i + 1) + '/' + std::to_string(totalImages);
+            cv::putText(displayImage, progressText, cv::Point2d(image.cols - 200, 60), cv::FONT_HERSHEY_PLAIN, 4,
+                        cv::Scalar(0, 255, 0), 5);
+
+            if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
+                    .count() >= 1) {
+                currentNum -= 1;
+                start = std::chrono::high_resolution_clock::now();
+            }
+        }
+        std::vector<cv::Point2f> cornerPts;
+        bool found = cv::findChessboardCornersSB(image, cv::Size(6, 8), cornerPts);
+        if (found) {
+            cv::drawChessboardCorners(displayImage, cv::Size(6, 8), cornerPts, found);
+            start = std::chrono::high_resolution_clock::now();
+            while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
+                       .count() < 2) {
+                // Just show the checkerboard
+            }
+            objPts.push_back(objp);
+            imgPts.push_back(cornerPts);
+            i++;
+        } else {
+            printf("Count not find chessboard\n");
+        }
+
+        cv::Mat camMat, distCoeffs, R, T;
+
+        bool calibrated = cv::calibrateCamera(objPts, imgPts, cv::Size(image.cols, image.rows), camMat, distCoeffs, R, T);
+        if (calibrated) {
+            cv::Mat newMat;
+            cv::getOptimalNewCameraMatrix(camMat, distCoeffs, cv::Size(image.cols, image.rows), 1, cv::Size(image.cols, image.rows));
+            std::string saveLoc = "/home/pi/Cam" + std::to_string(camId) + "Intr.xml";
+            cv::FileStorage cvFile(saveLoc, cv::FileStorage::WRITE);
+            cvFile.write("Matrix", newMat);
+            cvFile.write("DistCoeffs", distCoeffs);
+            cvFile.release();
+        } else {
+            printf("Failed to calibrate\n");
+        }
+    }
+    return 0;
+}

@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <chrono>
 
+int detectionType = 0; // 0: No classes 1: Table 2: Bins
+
 int main(int argc, char* argv[]) {
     auto yolo = createCoralYolo(
         "/home/pi/Buoy_Gate_Torpedo_300_Rotation360_2575_Mirror_Nano_full_integer_quant_edgetpu.tflite",

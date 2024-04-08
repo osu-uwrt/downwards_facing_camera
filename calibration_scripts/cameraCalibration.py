@@ -6,6 +6,8 @@ from picamera2 import Picamera2
 from serial import Serial
 from calibrationTools import *
 
+totalImages = 39
+
 def main():
     
     imageSize = (640, 360)
@@ -58,7 +60,7 @@ def main():
     cv2.resizeWindow("Feed", imageSize)
     
 
-    while i < 39:
+    while i < totalImages:
 
         print("Current Image: " + str(i + 1))
         currentNum = 2
@@ -70,7 +72,7 @@ def main():
             image = camera.capture_array()
             # displayIm = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
             displayIm = cv2.putText(image, str(currentNum), (0,60), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
-            displayIm = cv2.putText(displayIm, f"{i+1}/39", (imageSize[0] - 200, 60), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
+            displayIm = cv2.putText(displayIm, f"{i+1}/{totalImages}", (imageSize[0] - 200, 60), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
             # print(displayIm.shape)
             cv2.imshow("Feed", displayIm)
             keyPress = cv2.waitKey(10)

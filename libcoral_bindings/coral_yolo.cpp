@@ -8,6 +8,16 @@
 #include "tensorflow/lite/interpreter.h"
 #include "third_party/eigen3/Eigen/Core"
 
+// Task classes
+/*
+{0: 'buoy', 1: 'buoy_glyph_1', 2: 'buoy_glyph_2', 
+ 3: 'buoy_glyph_3', 4: 'buoy_glyph_4', 5: 'gate', 
+ 6: 'gate_glyph', 7: 'torpedo_open', 8: 'torpedo_closed', 
+ 9: 'torpedo_hole', 10: 'bin'}
+*/
+int bins[] = {10};
+int table[] = {};
+
 static float iou(float* bbox1, float* bbox2) {
     float area1 = bbox1[2] * bbox1[3] * 224 * 224;
     float area2 = bbox2[2] * bbox2[3] * 224 * 224;
@@ -39,7 +49,7 @@ static float iou(float* bbox1, float* bbox2) {
 class CoralYolo : public CoralYoloItf {
    public:
     std::string model_path_;
-    int num_classes_;
+    int num_classes_, task;
     int8_t int_min_conf_;
     float min_conf_, iou_thresh_;
 
@@ -135,7 +145,13 @@ class CoralYolo : public CoralYoloItf {
                     maxConf = result;
                 }
             }
-            if (maxConf >= min_conf_) {
+            bool partOfTask = false;
+            if (task == 1) {
+                partOfTask = std::find(std::begin(table), std::end(table), detection.classId) != std::end(table);
+            } else {
+                partOfTask = std::find(std::begin(bins), std::end(bins), detection.classId) != std::end(bins);
+            }
+            if (partOfTask && maxConf >= min_conf_) {
                 detection.conf = postProcessValue(maxConf, true);
                 nmsWithMask(detections, detection, iou_thresh_, i);
             }
