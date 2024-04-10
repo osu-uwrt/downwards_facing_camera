@@ -100,24 +100,24 @@ int main(int argc, char *argv[]) {
             i++;
         }
         else {
-            printf("Count not find chessboard\n");
+            printf("Can't not find chessboard\n");
         }
+    }
 
-        cv::Mat camMat, distCoeffs, R, T;
+    cv::Mat camMat, distCoeffs, R, T;
 
-        bool calibrated = cv::calibrateCamera(objPts, imgPts, imageSize, camMat, distCoeffs, R, T);
-        if (calibrated) {
-            cv::Mat newMat;
-            cv::getOptimalNewCameraMatrix(camMat, distCoeffs, imageSize, 1, imageSize);
-            std::string saveLoc = "/home/pi/Cam" + std::to_string(camId) + "Intr.xml";
-            cv::FileStorage cvFile(saveLoc, cv::FileStorage::WRITE);
-            cvFile.write("Matrix", newMat);
-            cvFile.write("DistCoeffs", distCoeffs);
-            cvFile.release();
-        }
-        else {
-            printf("Failed to calibrate\n");
-        }
+    bool calibrated = cv::calibrateCamera(objPts, imgPts, imageSize, camMat, distCoeffs, R, T);
+    if (calibrated) {
+        cv::Mat newMat;
+        cv::getOptimalNewCameraMatrix(camMat, distCoeffs, imageSize, 1, imageSize);
+        std::string saveLoc = "/home/pi/Cam" + std::to_string(camId) + "Intr.xml";
+        cv::FileStorage cvFile(saveLoc, cv::FileStorage::WRITE);
+        cvFile.write("Matrix", newMat);
+        cvFile.write("DistCoeffs", distCoeffs);
+        cvFile.release();
+    }
+    else {
+        printf("Failed to calibrate\n");
     }
     return 0;
 }
