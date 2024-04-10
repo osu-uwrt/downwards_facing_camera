@@ -1,14 +1,11 @@
+
+#include "stereoCalibration.hpp"
+
 #include "lccv.hpp"
-#include "tools/mySerial.h"
 
 #include <chrono>
 #include <opencv2/core/persistence.hpp>
-#include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
-
-int totalImages = 41;
-
-mySerial serialPort("/dev/ttyAMA0", 600);
 
 void sendSerial() {
     serialPort.Send('\x00');
@@ -16,13 +13,13 @@ void sendSerial() {
 
 void createCamera(lccv::PiCamera &camera_, int id) {
     camera_.options->camera = id;
-    camera_.options->video_width = 640;
-    camera_.options->video_height = 360;
+    camera_.options->video_width = imageSize.width;
+    camera_.options->video_height = imageSize.height;
     camera_.options->framerate = 60;
     // camera_.options->verbose = true;
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     lccv::PiCamera camL, camR;
 
     createCamera(camL, 0);
@@ -54,10 +51,14 @@ int main(int argc, char* argv[]) {
             cv::cvtColor(leftIm, leftIm, cv::COLOR_RGB2GRAY);
             cv::cvtColor(rightIm, rightIm, cv::COLOR_RGB2GRAY);
             cv::hconcat(leftIm, rightIm, vis);
-            cv::putText(vis, std::to_string(currentNum), cv::Point2d(60, 0), cv::FONT_HERSHEY_PLAIN, 4, cv::Scalar(0, 255, 0), 5);
+            cv::putText(vis, std::to_string(currentNum), cv::Point2d(60, 0), cv::FONT_HERSHEY_PLAIN, 4,
+                        cv::Scalar(0, 255, 0), 5);
             std::string displayText = std::to_string(i + 1) + "/" + std::to_string(totalImages);
-            cv::putText(vis, displayText, cv::Point(60, leftIm.rows - 200), cv::FONT_HERSHEY_PLAIN, 4, cv::Scalar(0, 255, 0), 5);
+            cv::putText(vis, displayText, cv::Point(60, leftIm.rows - 200), cv::FONT_HERSHEY_PLAIN, 4,
+                        cv::Scalar(0, 255, 0), 5);
             cv::resize(vis, vis, cv::Size(vis.rows / 1.75, vis.cols / 1.75));
+            cv::imshow("Calibration", vis);
+            cv::waitKey(1);
             if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
                     .count() >= 1) {
                 currentNum -= 1;
@@ -65,26 +66,32 @@ int main(int argc, char* argv[]) {
             }
         }
         std::vector<cv::Point2f> leftCorners, rightCorners;
-        bool leftFound = cv::findChessboardCornersSB(leftIm, cv::Size(6, 8), leftCorners);
-        bool rightFound = cv::findChessboardCornersSB(rightIm, cv::Size(6, 8), rightCorners);
+        bool leftFound = cv::findChessboardCornersSB(leftIm, patternSize, leftCorners);
+        bool rightFound = cv::findChessboardCornersSB(rightIm, patternSize, rightCorners);
         if (leftFound && rightFound) {
             objPts.push_back(objp);
             leftCornersVector.push_back(leftCorners);
             rightCornersVector.push_back(rightCorners);
-            cv::drawChessboardCorners(leftIm, cv::Size(6, 8), leftCorners, leftFound);
-            cv::drawChessboardCorners(rightIm, cv::Size(6, 8), rightCorners, rightFound);
+            cv::drawChessboardCorners(leftIm, patternSize, leftCorners, leftFound);
+            cv::drawChessboardCorners(rightIm, patternSize, rightCorners, rightFound);
+            cv::hconcat(leftIm, rightIm, vis);
             start = std::chrono::high_resolution_clock::now();
             while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
                        .count() < 2) {
                 // Just show the checkerboard
+                cv::imshow("Calibration", vis);
+                cv::waitKey(1);
             }
             i++;
-        } else {
+        }
+        else {
             if (leftFound) {
                 printf("Could not find right chessboard\n");
-            } else if (rightFound) {
+            }
+            else if (rightFound) {
                 printf("Could not find left chessboard\n");
-            } else {
+            }
+            else {
                 printf("Could not find any chessboard\n");
             }
         }
@@ -102,10 +109,12 @@ int main(int argc, char* argv[]) {
 
     cv::Mat R, T, E, F;
     cv::TermCriteria criteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 30, 0.001);
-    double retS = cv::stereoCalibrate(objPts, leftCornersVector, rightCornersVector, camMatL, camDCL, camMatR, camDCR, cv::Size(640, 360), R, T, E, F, flags, criteria);
+    double retS = cv::stereoCalibrate(objPts, leftCornersVector, rightCornersVector, camMatL, camDCL, camMatR, camDCR,
+                                      imageSize, R, T, E, F, flags, criteria);
     if (retS) {
         printf("Stereo Calibrated\n");
-    } else {
+    }
+    else {
         printf("Stereo Calibration Failed\n");
     }
 
@@ -116,9 +125,9 @@ int main(int argc, char* argv[]) {
     cv::initUndistortRectifyMap(camMatR, camDCR, rectR, projR, rightIm.size(), CV_16SC2, stereoMapRX, stereoMapRY);
 
     cv::FileStorage cvFile = cv::FileStorage("/home/pi/StereoMaps.xml", cv::FileStorage::WRITE);
-    cvFile.write("Left_Stereo_Map_x",stereoMapLX);
-    cvFile.write("Left_Stereo_Map_y",stereoMapLY);
-    cvFile.write("Right_Stereo_Map_x",stereoMapRX);
-    cvFile.write("Right_Stereo_Map_y",stereoMapRX);
+    cvFile.write("Left_Stereo_Map_x", stereoMapLX);
+    cvFile.write("Left_Stereo_Map_y", stereoMapLY);
+    cvFile.write("Right_Stereo_Map_x", stereoMapRX);
+    cvFile.write("Right_Stereo_Map_y", stereoMapRX);
     cvFile.release();
 }

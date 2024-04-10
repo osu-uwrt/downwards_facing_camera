@@ -1,16 +1,13 @@
+#include "cameraCalibration.hpp"
+
 #include "lccv.hpp"
-#include "tools/mySerial.h"
 
 #include <chrono>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
 
-int totalImages = 39;
-
 std::vector<std::vector<cv::Point3f>> objPts;
 std::vector<std::vector<cv::Point2f>> imgPts;
-
-mySerial serialPort("/dev/ttyAMA0", 600);
 
 void sendSerial() {
     serialPort.Send('\x00');
@@ -18,8 +15,8 @@ void sendSerial() {
 
 void createCamera(lccv::PiCamera &camera_, int id) {
     camera_.options->camera = id;
-    camera_.options->video_width = 640;
-    camera_.options->video_height = 360;
+    camera_.options->video_width = imageSize.width;
+    camera_.options->video_height = imageSize.height;
     camera_.options->framerate = 60;
     // camera_.options->verbose = true;
 }
@@ -54,7 +51,6 @@ int main(int argc, char *argv[]) {
     int currentNum;
     cv::Mat displayImage, image;
 
-
     std::vector<cv::Point3f> objp;
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 6; j++) {
@@ -79,6 +75,8 @@ int main(int argc, char *argv[]) {
             std::string progressText = std::to_string(i + 1) + '/' + std::to_string(totalImages);
             cv::putText(displayImage, progressText, cv::Point2d(image.cols - 200, 60), cv::FONT_HERSHEY_PLAIN, 4,
                         cv::Scalar(0, 255, 0), 5);
+            cv::imshow("Calibration", displayImage);
+            cv::waitKey(1);
 
             if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
                     .count() >= 1) {
@@ -87,33 +85,37 @@ int main(int argc, char *argv[]) {
             }
         }
         std::vector<cv::Point2f> cornerPts;
-        bool found = cv::findChessboardCornersSB(image, cv::Size(6, 8), cornerPts);
+        bool found = cv::findChessboardCornersSB(image, patternSize, cornerPts);
         if (found) {
-            cv::drawChessboardCorners(displayImage, cv::Size(6, 8), cornerPts, found);
+            cv::drawChessboardCorners(displayImage, patternSize, cornerPts, found);
             start = std::chrono::high_resolution_clock::now();
             while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
                        .count() < 2) {
                 // Just show the checkerboard
+                cv::imshow("Calibration", displayImage);
+                cv::waitKey(1);
             }
             objPts.push_back(objp);
             imgPts.push_back(cornerPts);
             i++;
-        } else {
+        }
+        else {
             printf("Count not find chessboard\n");
         }
 
         cv::Mat camMat, distCoeffs, R, T;
 
-        bool calibrated = cv::calibrateCamera(objPts, imgPts, cv::Size(image.cols, image.rows), camMat, distCoeffs, R, T);
+        bool calibrated = cv::calibrateCamera(objPts, imgPts, imageSize, camMat, distCoeffs, R, T);
         if (calibrated) {
             cv::Mat newMat;
-            cv::getOptimalNewCameraMatrix(camMat, distCoeffs, cv::Size(image.cols, image.rows), 1, cv::Size(image.cols, image.rows));
+            cv::getOptimalNewCameraMatrix(camMat, distCoeffs, imageSize, 1, imageSize);
             std::string saveLoc = "/home/pi/Cam" + std::to_string(camId) + "Intr.xml";
             cv::FileStorage cvFile(saveLoc, cv::FileStorage::WRITE);
             cvFile.write("Matrix", newMat);
             cvFile.write("DistCoeffs", distCoeffs);
             cvFile.release();
-        } else {
+        }
+        else {
             printf("Failed to calibrate\n");
         }
     }
