@@ -104,6 +104,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    printf("Calibration\n");
+
     cv::Mat camMat, distCoeffs, R, T;
 
     bool calibrated = cv::calibrateCamera(objPts, imgPts, imageSize, camMat, distCoeffs, R, T);
