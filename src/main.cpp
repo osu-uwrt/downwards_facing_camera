@@ -7,7 +7,7 @@
 #include "tools/mySerial.h"
 #include "coral_yolo.hpp"
 
-mySerial serialPort("/dev/ttyAMA0", 600);
+mySerial serialPort("/dev/ttyAMA4", 600);
 
 void createCamera(lccv::PiCamera &camera_, int id)
 {
@@ -161,7 +161,7 @@ int main()
 
     // cv::namedWindow("disparity",cv::WINDOW_NORMAL);
     // cv::resizeWindow("disparity",600,600);
-    
+
     // // Creating trackbars to dynamically update the StereoBM parameters
     // cv::createTrackbar("numDisparities", "disparity", &numDisparities, 18, on_trackbar1);
     // cv::createTrackbar("blockSize", "disparity", &blockSize, 50, on_trackbar2);
@@ -188,7 +188,7 @@ int main()
             cv::cvtColor(cam_1_im, cam_1_gray, cv::COLOR_RGB2GRAY);
             // cv::imshow("Video", cam_0_im);
             // cv::imshow("Video1", cam_1_im);
-            // printf("%d, %d", cam_0_im.size().width, cam_0_im.size().height);
+            // printf("%d\n", Left_Stereo_Map2.type());
 
             cv::Mat leftNice, rightNice, leftDisp, rightDisp, filteredDisp;
             cv::remap(cam_0_gray, leftNice, Left_Stereo_Map1, Left_Stereo_Map2, cv::INTER_LANCZOS4, cv::BORDER_CONSTANT, 0);
@@ -214,8 +214,8 @@ int main()
 
             // cv::resize(leftNice, leftNice, cv::Size(728, 544));
             // cv::imshow("Video", leftNice);
-            // cv::imshow("Video1", rightNice);
-            cv::imshow("Video", disparity);
+            cv::imshow("Video1", rightNice);
+            // cv::imshow("Video", disparity);
             
             ch = cv::waitKey(10);
 

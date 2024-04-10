@@ -27,16 +27,16 @@ int main(int argc, char *argv[]) {
     if (argc == 2) {
         camId = std::stoi(argv[1]);
         if (camId == 0 || camId == 1) {
-            printf("Calibrating camera: %d", camId);
+            printf("Calibrating camera: %d\n", camId);
         }
         else {
-            printf("Invalid arguement: %d", camId);
+            printf("Invalid arguement: %d\n", camId);
             return (0);
         }
     }
     else {
         camId = 0;
-        printf("No camera specified, defaulting to 0");
+        printf("No camera specified, defaulting to 0\n");
     }
     createCamera(camera, camId);
     camera.startVideo();
@@ -113,11 +113,17 @@ int main(int argc, char *argv[]) {
         printf("Calibrated, finding optimal\n");
         cv::Mat newMat = cv::getOptimalNewCameraMatrix(camMat, distCoeffs, imageSize, 1, imageSize);
         printf("Writing to file\n");
-        std::string saveLoc = "/home/pi/Cam" + std::to_string(camId) + "Intr.xml";
-        cv::FileStorage cvFile(saveLoc, cv::FileStorage::WRITE);
-        cvFile.write("Matrix", newMat);
+        printf("Size %d, %d\n", distCoeffs.rows, distCoeffs.cols);
+	std::string saveLoc = "/home/pi/Cam" + std::to_string(camId) + "Intr.xml";
+        printf(saveLoc.c_str());
+	printf("\n");
+	cv::FileStorage cvFile(saveLoc, cv::FileStorage::WRITE);
+        printf("Created File Storage\n");
+	cvFile.write("Matrix", newMat);
+	printf("Wrote matrix\n");
         cvFile.write("DistCoeffs", distCoeffs);
-        cvFile.release();
+        printf("WRITTEN");
+	//cvFile.release();
     }
     else {
         printf("Failed to calibrate\n");

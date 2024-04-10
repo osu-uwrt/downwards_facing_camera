@@ -28,6 +28,11 @@ int main(int argc, char *argv[]) {
     camL.startVideo();
     camR.startVideo();
 
+    // Need to fill up buffer (fairly sure why we need to do this, not entirely sure lmao)
+    for (int i = 0; i < 8; i++) {
+        sendSerial();
+    }
+
     int i = 0;
     cv::Mat leftIm, rightIm, vis;
     std::vector<std::vector<cv::Point2f>> leftCornersVector, rightCornersVector;
@@ -56,7 +61,7 @@ int main(int argc, char *argv[]) {
             std::string displayText = std::to_string(i + 1) + "/" + std::to_string(totalImages);
             cv::putText(vis, displayText, cv::Point(60, leftIm.rows - 200), cv::FONT_HERSHEY_PLAIN, 4,
                         cv::Scalar(0, 255, 0), 5);
-            cv::resize(vis, vis, cv::Size(vis.rows / 1.75, vis.cols / 1.75));
+            // cv::resize(vis, vis, cv::Size(vis.cols / 1.75, vis.rows / 1.75));
             cv::imshow("Calibration", vis);
             cv::waitKey(1);
             if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
@@ -121,8 +126,8 @@ int main(int argc, char *argv[]) {
     cv::Mat rectL, rectR, projL, projR, Q, roiL, roiR;
     cv::stereoRectify(camMatL, camDCL, camMatR, camDCR, leftIm.size(), R, T, rectL, rectR, projL, projR, Q, 1);
     cv::Mat stereoMapLX, stereoMapLY, stereoMapRX, stereoMapRY;
-    cv::initUndistortRectifyMap(camMatL, camDCL, rectL, projL, leftIm.size(), CV_16SC2, stereoMapLX, stereoMapLY);
-    cv::initUndistortRectifyMap(camMatR, camDCR, rectR, projR, rightIm.size(), CV_16SC2, stereoMapRX, stereoMapRY);
+    cv::initUndistortRectifyMap(camMatL, camDCL, rectL, projL, leftIm.size(), CV_32FC1, stereoMapLX, stereoMapLY);
+    cv::initUndistortRectifyMap(camMatR, camDCR, rectR, projR, rightIm.size(), CV_32FC1, stereoMapRX, stereoMapRY);
 
     cv::FileStorage cvFile = cv::FileStorage("/home/pi/StereoMaps.xml", cv::FileStorage::WRITE);
     cvFile.write("Left_Stereo_Map_x", stereoMapLX);
