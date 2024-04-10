@@ -111,8 +111,7 @@ int main(int argc, char *argv[]) {
     bool calibrated = cv::calibrateCamera(objPts, imgPts, imageSize, camMat, distCoeffs, R, T, cv::CALIB_USE_LU);
     if (calibrated) {
         printf("Calibrated, finding optimal\n");
-        cv::Mat newMat;
-        cv::getOptimalNewCameraMatrix(camMat, distCoeffs, imageSize, 1, imageSize);
+        cv::Mat newMat = cv::getOptimalNewCameraMatrix(camMat, distCoeffs, imageSize, 1, imageSize);
         printf("Writing to file\n");
         std::string saveLoc = "/home/pi/Cam" + std::to_string(camId) + "Intr.xml";
         cv::FileStorage cvFile(saveLoc, cv::FileStorage::WRITE);
