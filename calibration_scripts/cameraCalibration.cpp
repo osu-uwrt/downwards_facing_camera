@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
 
     while (i < totalImages) {
-        currentNum = 2;
+        currentNum = 1;
         while (currentNum > -1) {
             sendSerial();
             if (!camera.getVideoFrame(image, 99999999)) {
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
             cv::drawChessboardCorners(displayImage, patternSize, cornerPts, found);
             start = std::chrono::high_resolution_clock::now();
             while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
-                       .count() < 2) {
+                       .count() < 1) {
                 // Just show the checkerboard
                 cv::imshow("Calibration", displayImage);
                 cv::waitKey(1);
@@ -108,10 +108,12 @@ int main(int argc, char *argv[]) {
 
     cv::Mat camMat, distCoeffs, R, T;
 
-    bool calibrated = cv::calibrateCamera(objPts, imgPts, imageSize, camMat, distCoeffs, R, T);
+    bool calibrated = cv::calibrateCamera(objPts, imgPts, imageSize, camMat, distCoeffs, R, T, cv::CALIB_USE_LU);
     if (calibrated) {
+        printf("Calibrated, finding optimal\n");
         cv::Mat newMat;
         cv::getOptimalNewCameraMatrix(camMat, distCoeffs, imageSize, 1, imageSize);
+        printf("Writing to file\n");
         std::string saveLoc = "/home/pi/Cam" + std::to_string(camId) + "Intr.xml";
         cv::FileStorage cvFile(saveLoc, cv::FileStorage::WRITE);
         cvFile.write("Matrix", newMat);
