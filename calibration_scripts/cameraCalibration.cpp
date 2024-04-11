@@ -1,6 +1,9 @@
 #include "cameraCalibration.hpp"
 
 #include "lccv.hpp"
+#include "tools/CanmoreImageTransmitter.hpp"
+
+#include "canmore/client_ids.h"
 
 #include <chrono>
 #include <opencv2/calib3d.hpp>
@@ -24,7 +27,9 @@ void createCamera(lccv::PiCamera &camera_, int id) {
 int main(int argc, char *argv[]) {
     lccv::PiCamera camera;
     int camId;
-    if (argc == 2) {
+    bool useCan;
+
+    if (argc >= 2) {
         camId = std::stoi(argv[1]);
         if (camId == 0 || camId == 1) {
             printf("Calibrating camera: %d\n", camId);
@@ -33,13 +38,35 @@ int main(int argc, char *argv[]) {
             printf("Invalid arguement: %d\n", camId);
             return (0);
         }
+        if (argc >= 3) {
+            if (std::stoi(argv[2]) == 1) {
+                printf("Displaying image over CAN\n");
+                useCan = true;
+            }
+            else {
+                printf("Displaying image over X Server\n");
+                useCan = false;
+            }
+        }
     }
     else {
         camId = 0;
+        useCan = false;
         printf("No camera specified, defaulting to 0\n");
+        printf("Displaying image over X Server\n");
     }
+
+    if (useCan) {
+        int ifIdx = if_nametoindex(argv[1]);
+        if (!ifIdx) {
+            throw std::system_error(errno, std::generic_category(), "if_nametoindex");
+        }
+        CanmoreImageTransmitter imageTx(ifIdx, CANMORE_CLIENT_ID_DOWNWARDS_CAMERA);
+    }
+
     createCamera(camera, camId);
     camera.startVideo();
+
     // Need to fill up buffer (fairly sure why we need to do this, not entirely sure lmao)
     for (int i = 0; i < 8; i++) {
         sendSerial();
@@ -62,7 +89,9 @@ int main(int argc, char *argv[]) {
 
     while (i < totalImages) {
         currentNum = 1;
-        while (currentNum > -1) {
+        // while (currentNum > -1) {
+        // Press Q to advance
+        while (keyPress != 113) {
             sendSerial();
             if (!camera.getVideoFrame(image, 99999999)) {
                 printf("Couldn't grab frame\n");
@@ -72,17 +101,25 @@ int main(int argc, char *argv[]) {
             image.copyTo(displayImage);
             cv::putText(displayImage, std::to_string(currentNum), cv::Point2d(60, 0), cv::FONT_HERSHEY_PLAIN, 4,
                         cv::Scalar(0, 255, 0), 5);
-            std::string progressText = std::to_string(i + 1) + '/' + std::to_string(totalImages);
-            cv::putText(displayImage, progressText, cv::Point2d(image.cols - 200, 60), cv::FONT_HERSHEY_PLAIN, 4,
-                        cv::Scalar(0, 255, 0), 5);
-            cv::imshow("Calibration", displayImage);
-            cv::waitKey(1);
 
-            if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
-                    .count() >= 1) {
-                currentNum -= 1;
-                start = std::chrono::high_resolution_clock::now();
+            // For timebased images if you're doing it yourself
+            // std::string progressText = std::to_string(i + 1) + '/' + std::to_string(totalImages);
+            // cv::putText(displayImage, progressText, cv::Point2d(image.cols - 200, 60), cv::FONT_HERSHEY_PLAIN, 4,
+            //             cv::Scalar(0, 255, 0), 5);
+
+            if (useCan) {
             }
+            else {
+                cv::imshow("Calibration", displayImage);
+                keyPress = cv::waitKey(1) & 255;
+            }
+
+            // For timebased images if you're doing it yourself
+            // if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
+            //         .count() >= 1) {
+            //     currentNum -= 1;
+            //     start = std::chrono::high_resolution_clock::now();
+            // }
         }
         std::vector<cv::Point2f> cornerPts;
         bool found = cv::findChessboardCornersSB(image, patternSize, cornerPts);
@@ -92,8 +129,12 @@ int main(int argc, char *argv[]) {
             while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
                        .count() < 1) {
                 // Just show the checkerboard
-                cv::imshow("Calibration", displayImage);
-                cv::waitKey(1);
+                if (useCan) {
+                }
+                else {
+                    cv::imshow("Calibration", displayImage);
+                    keyPress = cv::waitKey(1) & 255;
+                }
             }
             objPts.push_back(objp);
             imgPts.push_back(cornerPts);
@@ -113,17 +154,11 @@ int main(int argc, char *argv[]) {
         printf("Calibrated, finding optimal\n");
         cv::Mat newMat = cv::getOptimalNewCameraMatrix(camMat, distCoeffs, imageSize, 1, imageSize);
         printf("Writing to file\n");
-        printf("Size %d, %d\n", distCoeffs.rows, distCoeffs.cols);
-	std::string saveLoc = "/home/pi/Cam" + std::to_string(camId) + "Intr.xml";
-        printf(saveLoc.c_str());
-	printf("\n");
-	cv::FileStorage cvFile(saveLoc, cv::FileStorage::WRITE);
-        printf("Created File Storage\n");
-	cvFile.write("Matrix", newMat);
-	printf("Wrote matrix\n");
+        std::string saveLoc = "/home/pi/Cam" + std::to_string(camId) + "Intr.xml";
+        cv::FileStorage cvFile(saveLoc, cv::FileStorage::WRITE);
+        cvFile.write("Matrix", newMat);
         cvFile.write("DistCoeffs", distCoeffs);
-        printf("WRITTEN");
-	//cvFile.release();
+        // cvFile.release();
     }
     else {
         printf("Failed to calibrate\n");

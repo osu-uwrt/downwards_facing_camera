@@ -5,6 +5,7 @@ set (CMAKE_CXX_STANDARD 17)
 
 find_package(OpenCV REQUIRED)
 find_package(PkgConfig REQUIRED)
+find_package(JPEG REQUIRED)
 pkg_check_modules(LIBCAMERA REQUIRED libcamera)
 
 include_directories(${LIBCAMERA_INCLUDE_DIRS} ${OPENCV_INCLUDE_DIRS} include)
@@ -12,6 +13,9 @@ include_directories(${LIBCAMERA_INCLUDE_DIRS} ${OPENCV_INCLUDE_DIRS} include)
 add_executable(cameraDetect src/main.cpp tools/mySerial.cpp)
 add_executable(intrCalibration calibration_scripts/cameraCalibration.cpp tools/mySerial.cpp)
 add_executable(stereoCalibration calibration_scripts/stereoCalibration.cpp tools/mySerial.cpp)
+
+set_target_properties(intrCalibration PROPERTIES EXCLUDE_FROM_ALL TRUE)
+set_target_properties(stereoCalibration PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 # target_link_directories(runCameras PUBLIC libcoral_bindings/out/)
 # target_link_libraries(runCameras -llccv ${OpenCV_LIBS} -lcoral_yolo)

@@ -23,9 +23,9 @@ void sendSerial()
     serialPort.Send('\x00');
 }
 
-// bool isInSegment(cv::Point2d point, float *segMap) {
-//     if (segMap)
-// }
+bool isInSegment(cv::Point2d point, float *segMap) {
+    if () 
+}
 
 int numDisparities = 18;
 int blockSize = 2;
