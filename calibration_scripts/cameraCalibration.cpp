@@ -6,6 +6,7 @@
 #include "canmore/client_ids.h"
 
 #include <chrono>
+#include <net/if.h>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
 
@@ -27,7 +28,7 @@ void createCamera(lccv::PiCamera &camera_, int id) {
 int main(int argc, char *argv[]) {
     lccv::PiCamera camera;
     int camId;
-    bool useCan;
+    bool useCan = false;
 
     if (argc >= 2) {
         camId = std::stoi(argv[1]);
@@ -45,24 +46,20 @@ int main(int argc, char *argv[]) {
             }
             else {
                 printf("Displaying image over X Server\n");
-                useCan = false;
             }
         }
     }
     else {
         camId = 0;
-        useCan = false;
         printf("No camera specified, defaulting to 0\n");
         printf("Displaying image over X Server\n");
     }
 
-    if (useCan) {
-        int ifIdx = if_nametoindex(argv[1]);
-        if (!ifIdx) {
-            throw std::system_error(errno, std::generic_category(), "if_nametoindex");
-        }
-        CanmoreImageTransmitter imageTx(ifIdx, CANMORE_CLIENT_ID_DOWNWARDS_CAMERA);
-    }
+    // int ifIdx = if_nametoindex(0);
+    // if (!ifIdx) {
+    //     throw std::system_error(errno, std::generic_category(), "if_nametoindex");
+    // }
+    // CanmoreImageTransmitter imageTx(ifIdx, CANMORE_CLIENT_ID_DOWNWARDS_CAMERA);
 
     createCamera(camera, camId);
     camera.startVideo();
@@ -92,6 +89,7 @@ int main(int argc, char *argv[]) {
         // while (currentNum > -1) {
         // Press Q to advance
         while (keyPress != 113) {
+            auto start = std::chrono::high_resolution_clock::now();
             sendSerial();
             if (!camera.getVideoFrame(image, 99999999)) {
                 printf("Couldn't grab frame\n");
@@ -99,19 +97,20 @@ int main(int argc, char *argv[]) {
             }
             cv::cvtColor(image, image, cv::COLOR_RGB2GRAY);
             image.copyTo(displayImage);
-            cv::putText(displayImage, std::to_string(currentNum), cv::Point2d(60, 0), cv::FONT_HERSHEY_PLAIN, 4,
-                        cv::Scalar(0, 255, 0), 5);
-
             // For timebased images if you're doing it yourself
-            // std::string progressText = std::to_string(i + 1) + '/' + std::to_string(totalImages);
-            // cv::putText(displayImage, progressText, cv::Point2d(image.cols - 200, 60), cv::FONT_HERSHEY_PLAIN, 4,
+            // cv::putText(displayImage, std::to_string(currentNum), cv::Point2d(0, 60), cv::FONT_HERSHEY_PLAIN, 4,
             //             cv::Scalar(0, 255, 0), 5);
 
+            std::string progressText = std::to_string(i + 1) + '/' + std::to_string(totalImages);
+            cv::putText(displayImage, progressText, cv::Point2d(image.cols - 200, 60), cv::FONT_HERSHEY_PLAIN, 4,
+                        cv::Scalar(0, 255, 0), 5);
+
             if (useCan) {
+                // imageTx.transmitImage(displayImage);
             }
             else {
                 cv::imshow("Calibration", displayImage);
-                keyPress = cv::waitKey(1) & 255;
+                keyPress = cv::waitKey(100) & 255;
             }
 
             // For timebased images if you're doing it yourself
@@ -121,6 +120,7 @@ int main(int argc, char *argv[]) {
             //     start = std::chrono::high_resolution_clock::now();
             // }
         }
+        keyPress = 0;
         std::vector<cv::Point2f> cornerPts;
         bool found = cv::findChessboardCornersSB(image, patternSize, cornerPts);
         if (found) {
