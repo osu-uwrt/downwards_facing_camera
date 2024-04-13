@@ -6,12 +6,15 @@
 #include "canmore/client_ids.h"
 
 #include <chrono>
+#include <time.h>
 #include <net/if.h>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
 
 std::vector<std::vector<cv::Point3f>> objPts;
 std::vector<std::vector<cv::Point2f>> imgPts;
+
+std::string saveFoldername;
 
 void sendSerial() {
     serialPort.Send('\x00');
@@ -54,6 +57,12 @@ int main(int argc, char *argv[]) {
         printf("No camera specified, defaulting to 0\n");
         printf("Displaying image over X Server\n");
     }
+
+    std::stringstream stream;
+    std::time_t current_time = std::time(nullptr);
+    std::tm tm = *std::localtime(&current_time);
+    stream << std::put_time(&tm, "%Y%m%d%H%M");
+    saveFoldername = "/home/pi/" + stream.str() + "_Cam" + std::to_string(camId) + "Imgs/";
 
     CanmoreImageTransmitter *imageTx;
 
@@ -142,6 +151,7 @@ int main(int argc, char *argv[]) {
                     keyPress = cv::waitKey(1) & 255;
                 }
             }
+            cv::imwrite(saveFoldername + "/IntrImg_" + std::to_string(i) + ".png", image);
             objPts.push_back(objp);
             imgPts.push_back(cornerPts);
             i++;

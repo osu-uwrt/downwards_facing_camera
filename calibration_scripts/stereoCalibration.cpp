@@ -28,6 +28,8 @@ int main(int argc, char *argv[]) {
     camL.startVideo();
     camR.startVideo();
 
+    std::string saveFoldername;
+
     // Need to fill up buffer (fairly sure why we need to do this, not entirely sure lmao)
     for (int i = 0; i < 8; i++) {
         sendSerial();
@@ -44,6 +46,12 @@ int main(int argc, char *argv[]) {
             objp.push_back(cv::Point3f(j, i, 0));
         }
     }
+
+    std::stringstream stream;
+    std::time_t current_time = std::time(nullptr);
+    std::tm tm = *std::localtime(&current_time);
+    stream << std::put_time(&tm, "%Y%m%d%H%M");
+    saveFoldername = "/home/pi/" + stream.str() + "_StereoImgs/";
 
     while (i < totalImages) {
         int currentNum = 2;
@@ -77,6 +85,8 @@ int main(int argc, char *argv[]) {
             objPts.push_back(objp);
             leftCornersVector.push_back(leftCorners);
             rightCornersVector.push_back(rightCorners);
+            cv::imwrite(saveFoldername + "Left_" + std::to_string(i) + ".png", leftIm);
+            cv::imwrite(saveFoldername + "Right_" + std::to_string(i) + ".png", rightIm);
             cv::drawChessboardCorners(leftIm, patternSize, leftCorners, leftFound);
             cv::drawChessboardCorners(rightIm, patternSize, rightCorners, rightFound);
             cv::hconcat(leftIm, rightIm, vis);
