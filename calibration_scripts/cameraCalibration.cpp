@@ -55,11 +55,16 @@ int main(int argc, char *argv[]) {
         printf("Displaying image over X Server\n");
     }
 
-    // int ifIdx = if_nametoindex(0);
-    // if (!ifIdx) {
-    //     throw std::system_error(errno, std::generic_category(), "if_nametoindex");
-    // }
-    // CanmoreImageTransmitter imageTx(ifIdx, CANMORE_CLIENT_ID_DOWNWARDS_CAMERA);
+    CanmoreImageTransmitter *imageTx;
+
+    if (useCan) {
+
+        int ifIdx = if_nametoindex("can0");
+        if (!ifIdx) {
+            throw std::system_error(errno, std::generic_category(), "if_nametoindex");
+        }
+        imageTx = new CanmoreImageTransmitter(ifIdx, CANMORE_CLIENT_ID_DOWNWARDS_CAMERA);
+    }
 
     createCamera(camera, camId);
     camera.startVideo();
@@ -106,7 +111,7 @@ int main(int argc, char *argv[]) {
                         cv::Scalar(0, 255, 0), 5);
 
             if (useCan) {
-                // imageTx.transmitImage(displayImage);
+                imageTx->transmitImage(displayImage);
             }
             else {
                 cv::imshow("Calibration", displayImage);
@@ -130,6 +135,7 @@ int main(int argc, char *argv[]) {
                        .count() < 1) {
                 // Just show the checkerboard
                 if (useCan) {
+                    imageTx->transmitImage(displayImage);
                 }
                 else {
                     cv::imshow("Calibration", displayImage);
@@ -149,7 +155,7 @@ int main(int argc, char *argv[]) {
 
     cv::Mat camMat, distCoeffs, R, T;
 
-    bool calibrated = cv::calibrateCamera(objPts, imgPts, imageSize, camMat, distCoeffs, R, T, cv::CALIB_USE_LU);
+    bool calibrated = cv::calibrateCamera(objPts, imgPts, imageSize, camMat, distCoeffs, R, T);
     if (calibrated) {
         printf("Calibrated, finding optimal\n");
         cv::Mat newMat = cv::getOptimalNewCameraMatrix(camMat, distCoeffs, imageSize, 1, imageSize);
