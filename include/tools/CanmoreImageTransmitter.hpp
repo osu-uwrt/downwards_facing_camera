@@ -47,13 +47,24 @@ public:
         }
     }
 
+    /**
+     * @brief Get a keypress sent over from the viewer
+     *
+     * @return int The pressed key, or -1 if no key pressed
+     */
+    int getKeypress() {
+        uint8_t lastKeypress = pendingKeypress_;
+        pendingKeypress_ = -1;
+        return lastKeypress;
+    }
+
     const uint8_t clientId;
 
 protected:
     void handleFrame(canid_t can_id, const std::span<const uint8_t> &data) override;
 
 private:
-    void recomputeEncoderSize(cv::Size inputSize);
+    void recomputeEncoderSize();
 
     static void libjpegInitDestination(struct jpeg_compress_struct *cinfo);
     static int libjpegEmptyOutputBuffer(struct jpeg_compress_struct *cinfo);
@@ -99,4 +110,5 @@ private:
     bool streamEnabled_ = false;
     uint8_t streamId_ = 0;
     uint8_t streamQuality_;
+    int pendingKeypress_ = -1;
 };

@@ -6,10 +6,11 @@
 #include "canmore/client_ids.h"
 
 #include <chrono>
-#include <time.h>
 #include <net/if.h>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
+#include <time.h>
+#include <unistd.h>
 
 std::vector<std::vector<cv::Point3f>> objPts;
 std::vector<std::vector<cv::Point2f>> imgPts;
@@ -31,7 +32,7 @@ void createCamera(lccv::PiCamera &camera_, int id) {
 int main(int argc, char *argv[]) {
     lccv::PiCamera camera;
     int camId;
-    bool useCan = false;
+    bool useCan = true;
 
     if (argc >= 2) {
         camId = std::stoi(argv[1]);
@@ -67,12 +68,11 @@ int main(int argc, char *argv[]) {
     CanmoreImageTransmitter *imageTx;
 
     if (useCan) {
-
         int ifIdx = if_nametoindex("can0");
         if (!ifIdx) {
             throw std::system_error(errno, std::generic_category(), "if_nametoindex");
         }
-        imageTx = new CanmoreImageTransmitter(ifIdx, CANMORE_CLIENT_ID_DOWNWARDS_CAMERA);
+        imageTx = new CanmoreImageTransmitter(ifIdx, CANMORE_CLIENT_ID_DOWNWARDS_CAMERA, 190, 20, true);
     }
 
     createCamera(camera, camId);
@@ -121,6 +121,8 @@ int main(int argc, char *argv[]) {
 
             if (useCan) {
                 imageTx->transmitImage(displayImage);
+                usleep(200000);
+                keyPress = imageTx->getKeypress();
             }
             else {
                 cv::imshow("Calibration", displayImage);
@@ -145,6 +147,7 @@ int main(int argc, char *argv[]) {
                 // Just show the checkerboard
                 if (useCan) {
                     imageTx->transmitImage(displayImage);
+                    usleep(200000);
                 }
                 else {
                     cv::imshow("Calibration", displayImage);

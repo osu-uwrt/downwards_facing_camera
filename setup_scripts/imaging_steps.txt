@@ -9,6 +9,8 @@ Imaging Steps:
  - Install Packages:
   - build-essential
   - cmake
+  - libgtk2.0-dev
+  - pkg-config
   - libsystemd-dev
   - libcamera-dev
   - libjpeg62-turbo-dev
@@ -36,8 +38,8 @@ cd build
 cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_TBB=ON -DWITH_LAPACK=ON -DENABLE_NEON=ON -DBUILD_TESTS=OFF -DINSTALL_C_EXAMPLES=OFF -DINSTALL_PYTHON_EXAMPLES=OFF -DBUILD_EXAMPLES=OFF -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules -DCMAKE_CXX_STANDARD=17  ../opencv
 make -j4
 sudo make install
-cd ..
-git clone https://github.com/kbarni/LCCV
+cd ../..
+git clone https://github.com/osu-uwrt/LCCV
 cd LCCV
 mkdir build
 cd build
@@ -69,21 +71,20 @@ echo "kernel=kernel8.img" | sudo tee -a /boot/firmware/config.txt
 # Fix power mode settings (fixes RAM did not enable within timeout errors)
 echo "options vfio-pci ids=1ac1:089a disable_idle_d3=1" | sudo tee /etc/modprobe.d/tpu.conf
 
-sudo shutdown -r now
-
-TODO: Configure the other hat peripherals (should probably be done through device tree overlay rather than config stuff)
-config.txt
-    kernel=kernel8.img
-
+# Add CAN bus to networking interface
 /etc/network/interfaces.d/can0.conf
 auto can0
 iface can0 can static
-    qlen 64
     bitrate 250000
     berr-reporting on
     fd on
     dbitrate 2000000
+    post-up ifconfig $IFACE txqueuelen 1000
 
+sudo shutdown -r now
+
+TODO: Configure Network Manager
+sudo nmcli connection up OSU-UWRT-ECHO-5G
 
 TODO: Build and install final application
 TODO: Enable watchdog

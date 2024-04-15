@@ -71,10 +71,10 @@ CanmoreImageTransmitter::~CanmoreImageTransmitter() {
     delete err_;
 }
 
-void CanmoreImageTransmitter::recomputeEncoderSize(cv::Size inputSize) {
+void CanmoreImageTransmitter::recomputeEncoderSize() {
     // Compute the transmitted image size
     int resizeWidth, resizeHeight;
-    double aspectRatio = (double) inputSize.width / (double) inputSize.height;
+    double aspectRatio = (double) expectedInputSize_.width / (double) expectedInputSize_.height;
     if (aspectRatio > 1) {
         resizeWidth = maxDim_;
         resizeHeight = maxDim_ / aspectRatio;
@@ -83,7 +83,6 @@ void CanmoreImageTransmitter::recomputeEncoderSize(cv::Size inputSize) {
         resizeHeight = maxDim_;
         resizeWidth = maxDim_ * aspectRatio;
     }
-    expectedInputSize_ = inputSize;
     txImgSize_ = cv::Size(resizeWidth, resizeHeight);
 
     info_->image_width = txImgSize_.width;
@@ -103,30 +102,42 @@ void CanmoreImageTransmitter::transmitImage(cv::Mat &img) {
     }
 
     // Convert image to grayscale
-    cv::Mat largeGrayImg, grayImg;
+    cv::Mat imgToEncode;
 
     if (img.depth() != CV_8U) {
         throw std::logic_error("Invalid image depth");
     }
-    if (img.channels() != 3) {
-        throw std::logic_error("Invalid number of image dimensions");
-    }
     if (img.size() != expectedInputSize_) {
-        recomputeEncoderSize(img.size());
+        expectedInputSize_ = img.size();
+        recomputeEncoderSize();
     }
 
+    // Handle size conversion
     if (convertToGrayscale_) {
-        cv::cvtColor(img, largeGrayImg, cv::COLOR_BGR2GRAY);
+        if (img.channels() == 3) {
+            cv::Mat largeGrayImg;
+            cv::cvtColor(img, largeGrayImg, cv::COLOR_BGR2GRAY);
+            cv::resize(largeGrayImg, imgToEncode, txImgSize_);
+        }
+        else if (img.channels() == 2) {
+            // Already grayscale
+            cv::resize(img, imgToEncode, txImgSize_);
+        }
+        else {
+            throw std::logic_error("Invalid number of image dimensions: Expected either color or grayscale image");
+        }
     }
     else {
-        cv::cvtColor(img, largeGrayImg, cv::COLOR_BGR2RGB);
+        if (img.channels() != 3) {
+            throw std::logic_error("Invalid number of image dimensions: Expected color image");
+        }
+        cv::resize(img, imgToEncode, txImgSize_);
     }
-    cv::resize(largeGrayImg, grayImg, txImgSize_);
 
     // Populate every scanline for each row in the input gray image
     std::vector<JSAMPROW> scanlines(info_->image_height);
     for (int i = 0; i < scanlines.size(); i++) {
-        scanlines.at(i) = grayImg.ptr(i, 0);
+        scanlines.at(i) = imgToEncode.ptr(i, 0);
     }
 
     // Perform the compression
@@ -207,6 +218,13 @@ void CanmoreImageTransmitter::handleFrame(canid_t can_id, const std::span<const 
             return;
         streamQuality_ = quality;
         jpeg_set_quality(info_, quality, TRUE);
+    }
+    else if (cmd.pkt.cmd == CANMORE_CAMERA_FEED_CMD_MAX_DIMENSION) {
+        maxDim_ = cmd.pkt.data.max_dimension;
+        recomputeEncoderSize();
+    }
+    else if (cmd.pkt.cmd == CANMORE_CAMERA_FEED_CMD_KEYPRESS) {
+        pendingKeypress_ = cmd.pkt.data.keypress;
     }
 }
 
