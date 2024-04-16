@@ -12,7 +12,7 @@ def main():
     
     imageSize = (640, 360)
 
-    serialPort = Serial("/dev/ttyAMA0", 450)
+    serialPort = Serial("/dev/ttyAMA4", 450)
 
     camera = None
     id = 0
@@ -70,8 +70,8 @@ def main():
         while currentNum > -1:
             serialPort.write('\x00'.encode())
             image = camera.capture_array()
-            # displayIm = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-            displayIm = cv2.putText(image, str(currentNum), (0,60), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
+            displayIm = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            displayIm = cv2.putText(displayIm, str(currentNum), (0,60), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
             displayIm = cv2.putText(displayIm, f"{i+1}/{totalImages}", (imageSize[0] - 200, 60), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
             # print(displayIm.shape)
             cv2.imshow("Feed", displayIm)
@@ -101,7 +101,7 @@ def main():
         cv2.destroyAllWindows()
         print("Success!")
         newMat, roi = cv2.getOptimalNewCameraMatrix(
-            mtx, dist, (1456, 1088), 1, (1456, 1088)
+            mtx, dist, imageSize, 1, imageSize
         )
         cvFile = cv2.FileStorage(f"/home/pi/Cam{id}Intr.xml", cv2.FileStorage_WRITE)
         cvFile.write("Matrix", newMat)

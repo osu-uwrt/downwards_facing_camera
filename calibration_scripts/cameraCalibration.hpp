@@ -4,6 +4,6 @@
 int totalImages = 39;
 
 cv::Size imageSize = cv::Size(640, 360);
-cv::Size patternSize = cv::Size(8, 6);
+cv::Size patternSize = cv::Size(6, 8);
 
 mySerial serialPort("/dev/ttyAMA4", 600);

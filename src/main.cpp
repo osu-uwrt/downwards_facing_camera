@@ -32,7 +32,7 @@ int blockSize = 2;
 int preFilterType = 1;
 int preFilterSize = 1;
 int preFilterCap = 31;
-int minDisparity = 50;
+int minDisparity = 10;
 int textureThreshold = 10;
 int uniquenessRatio = 15;
 int speckleRange = 0;
@@ -115,6 +115,7 @@ int main()
     mapsFile["Right_Stereo_Map_y"] >> Right_Stereo_Map2;
     mapsFile.release();
 
+    Right_Stereo_Map2.convertTo(Right_Stereo_Map2, CV_16UC1);
     leftStereo->setMinDisparity(0);
     leftStereo->setNumDisparities(128);
     leftStereo->setBlockSize(55); // 15
@@ -188,7 +189,6 @@ int main()
             cv::cvtColor(cam_1_im, cam_1_gray, cv::COLOR_RGB2GRAY);
             // cv::imshow("Video", cam_0_im);
             // cv::imshow("Video1", cam_1_im);
-            // printf("%d\n", Left_Stereo_Map2.type());
 
             cv::Mat leftNice, rightNice, leftDisp, rightDisp, filteredDisp;
             cv::remap(cam_0_gray, leftNice, Left_Stereo_Map1, Left_Stereo_Map2, cv::INTER_LANCZOS4, cv::BORDER_CONSTANT, 0);
@@ -214,8 +214,8 @@ int main()
 
             // cv::resize(leftNice, leftNice, cv::Size(728, 544));
             // cv::imshow("Video", leftNice);
-            cv::imshow("Video1", rightNice);
-            // cv::imshow("Video", disparity);
+            // cv::imshow("Video1", rightNice);
+            cv::imshow("Video", disparity);
             
             ch = cv::waitKey(10);
 

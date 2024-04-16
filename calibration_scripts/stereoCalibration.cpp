@@ -2,10 +2,15 @@
 #include "stereoCalibration.hpp"
 
 #include "lccv.hpp"
+#include "tools/CanmoreImageTransmitter.hpp"
+#include "canmore/client_ids.h"
 
 #include <chrono>
+#include <net/if.h>
+#include <filesystem>
 #include <opencv2/core/persistence.hpp>
 #include <opencv2/opencv.hpp>
+#include <unistd.h>
 
 void sendSerial() {
     serialPort.Send('\x00');
@@ -27,6 +32,31 @@ int main(int argc, char *argv[]) {
 
     camL.startVideo();
     camR.startVideo();
+
+    bool useCan = false;
+
+    if (argc >= 2) {
+        useCan = std::stoi(argv[1]);
+        if (useCan == 1) {
+            printf("Displaying image over can\n");
+            useCan = true;
+        }
+        else {
+            printf("Displaying image over X server\n");
+        }
+    } else {
+            printf("Displaying image over X server\n");
+    }
+
+    CanmoreImageTransmitter *imageTx;
+
+    if (useCan) {
+        int ifIdx = if_nametoindex("can0");
+        if (!ifIdx) {
+            throw std::system_error(errno, std::generic_category(), "if_nametoindex");
+        }
+        imageTx = new CanmoreImageTransmitter(ifIdx, CANMORE_CLIENT_ID_DOWNWARDS_CAMERA, 190, 20, true);
+    }
 
     std::string saveFoldername;
 
@@ -51,12 +81,16 @@ int main(int argc, char *argv[]) {
     std::time_t current_time = std::time(nullptr);
     std::tm tm = *std::localtime(&current_time);
     stream << std::put_time(&tm, "%Y%m%d%H%M");
-    saveFoldername = "/home/pi/" + stream.str() + "_StereoImgs/";
+    saveFoldername = "/home/pi/CalibrationImgs/" + stream.str() + "_StereoImgs/";
+    std::filesystem::create_directories(saveFoldername.c_str());
+
+    int keyPress = 0;
 
     while (i < totalImages) {
-        int currentNum = 2;
+        int currentNum = 1;
         auto start = std::chrono::high_resolution_clock::now();
-        while (currentNum > -1) {
+        while (keyPress != 'c') {
+        // while (currentNum > -1) {
             sendSerial();
             if (!camL.getVideoFrame(leftIm, 99999999) || !camR.getVideoFrame(rightIm, 99999999)) {
                 printf("Cannot grab video frame\n");
@@ -70,14 +104,27 @@ int main(int argc, char *argv[]) {
             cv::putText(vis, displayText, cv::Point(60, leftIm.rows - 200), cv::FONT_HERSHEY_PLAIN, 4,
                         cv::Scalar(0, 255, 0), 5);
             // cv::resize(vis, vis, cv::Size(vis.cols / 1.75, vis.rows / 1.75));
-            cv::imshow("Calibration", vis);
-            cv::waitKey(1);
+            if (useCan) {
+                imageTx->transmitImage(vis);
+                usleep(200000);
+                keyPress = imageTx->getKeypress();
+            } else {
+                cv::imshow("Calibration", vis);
+                keyPress = cv::waitKey(1) & 255;
+            }
             if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
                     .count() >= 1) {
                 currentNum -= 1;
                 start = std::chrono::high_resolution_clock::now();
             }
         }
+        // char *filename = new char[100];
+        // sprintf(filename, "/home/pi/202404161747_StereoImgs/Left_%i.png", i);
+        // leftIm = cv::imread(filename);
+        // filename = new char[100];
+        // sprintf(filename, "/home/pi/202404161747_StereoImgs/Right_%i.png", i);
+        // rightIm = cv::imread(filename);
+
         std::vector<cv::Point2f> leftCorners, rightCorners;
         bool leftFound = cv::findChessboardCornersSB(leftIm, patternSize, leftCorners);
         bool rightFound = cv::findChessboardCornersSB(rightIm, patternSize, rightCorners);
@@ -92,7 +139,7 @@ int main(int argc, char *argv[]) {
             cv::hconcat(leftIm, rightIm, vis);
             start = std::chrono::high_resolution_clock::now();
             while (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
-                       .count() < 2) {
+                       .count() < 0) {
                 // Just show the checkerboard
                 cv::imshow("Calibration", vis);
                 cv::waitKey(1);
@@ -110,7 +157,12 @@ int main(int argc, char *argv[]) {
                 printf("Could not find any chessboard\n");
             }
         }
+        keyPress = 0;
     }
+
+    // camL.stopVideo();
+    // camR.stopVideo();
+    
     cv::FileStorage leftIntrFile("/home/pi/Cam0Intr.xml", cv::FileStorage::READ);
     cv::FileStorage rightIntrFile("/home/pi/Cam1Intr.xml", cv::FileStorage::READ);
 
@@ -119,6 +171,8 @@ int main(int argc, char *argv[]) {
     leftIntrFile["DistCoeffs"] >> camDCL;
     rightIntrFile["Matrix"] >> camMatR;
     rightIntrFile["DistCoeffs"] >> camDCR;
+    leftIntrFile.release();
+    rightIntrFile.release();
 
     int flags = 0 | cv::CALIB_FIX_INTRINSIC;
 
@@ -136,13 +190,14 @@ int main(int argc, char *argv[]) {
     cv::Mat rectL, rectR, projL, projR, Q, roiL, roiR;
     cv::stereoRectify(camMatL, camDCL, camMatR, camDCR, leftIm.size(), R, T, rectL, rectR, projL, projR, Q, 1);
     cv::Mat stereoMapLX, stereoMapLY, stereoMapRX, stereoMapRY;
-    cv::initUndistortRectifyMap(camMatL, camDCL, rectL, projL, leftIm.size(), CV_32FC1, stereoMapLX, stereoMapLY);
-    cv::initUndistortRectifyMap(camMatR, camDCR, rectR, projR, rightIm.size(), CV_32FC1, stereoMapRX, stereoMapRY);
+    cv::initUndistortRectifyMap(camMatL, camDCL, rectL, projL, imageSize, CV_16SC2, stereoMapLX, stereoMapLY);
+    cv::initUndistortRectifyMap(camMatR, camDCR, rectR, projR, imageSize, CV_16SC2, stereoMapRX, stereoMapRY);
+    // printf("%d\n", stereoMapRY.type());
 
     cv::FileStorage cvFile = cv::FileStorage("/home/pi/StereoMaps.xml", cv::FileStorage::WRITE);
     cvFile.write("Left_Stereo_Map_x", stereoMapLX);
     cvFile.write("Left_Stereo_Map_y", stereoMapLY);
     cvFile.write("Right_Stereo_Map_x", stereoMapRX);
-    cvFile.write("Right_Stereo_Map_y", stereoMapRX);
+    cvFile.write("Right_Stereo_Map_y", stereoMapRY);
     cvFile.release();
 }

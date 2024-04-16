@@ -2,13 +2,13 @@
 
 #include "lccv.hpp"
 #include "tools/CanmoreImageTransmitter.hpp"
-
 #include "canmore/client_ids.h"
 
 #include <chrono>
 #include <net/if.h>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
+#include <filesystem>
 #include <time.h>
 #include <unistd.h>
 
@@ -32,7 +32,7 @@ void createCamera(lccv::PiCamera &camera_, int id) {
 int main(int argc, char *argv[]) {
     lccv::PiCamera camera;
     int camId;
-    bool useCan = true;
+    bool useCan = false;
 
     if (argc >= 2) {
         camId = std::stoi(argv[1]);
@@ -63,8 +63,9 @@ int main(int argc, char *argv[]) {
     std::time_t current_time = std::time(nullptr);
     std::tm tm = *std::localtime(&current_time);
     stream << std::put_time(&tm, "%Y%m%d%H%M");
-    saveFoldername = "/home/pi/" + stream.str() + "_Cam" + std::to_string(camId) + "Imgs/";
+    saveFoldername = "/home/pi/CalibrationImgs/" + stream.str() + "_Cam" + std::to_string(camId) + "Imgs/";
 
+    std::filesystem::create_directories(saveFoldername.c_str());
     CanmoreImageTransmitter *imageTx;
 
     if (useCan) {
@@ -77,6 +78,7 @@ int main(int argc, char *argv[]) {
 
     createCamera(camera, camId);
     camera.startVideo();
+    // sleep(1);
 
     // Need to fill up buffer (fairly sure why we need to do this, not entirely sure lmao)
     for (int i = 0; i < 8; i++) {
@@ -100,12 +102,12 @@ int main(int argc, char *argv[]) {
 
     while (i < totalImages) {
         currentNum = 1;
-        // while (currentNum > -1) {
+        while (currentNum > -1) {
         // Press Q to advance
-        while (keyPress != 113) {
-            auto start = std::chrono::high_resolution_clock::now();
+        // while (keyPress != 'c') {
+            //auto start = std::chrono::high_resolution_clock::now();
             sendSerial();
-            if (!camera.getVideoFrame(image, 99999999)) {
+            if (!camera.getVideoFrame(image, 10000)) {
                 printf("Couldn't grab frame\n");
                 continue;
             }
@@ -126,15 +128,16 @@ int main(int argc, char *argv[]) {
             }
             else {
                 cv::imshow("Calibration", displayImage);
+		//usleep(75000);
                 keyPress = cv::waitKey(100) & 255;
             }
 
             // For timebased images if you're doing it yourself
-            // if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
-            //         .count() >= 1) {
-            //     currentNum -= 1;
-            //     start = std::chrono::high_resolution_clock::now();
-            // }
+             if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
+                     .count() >= 1) {
+                 currentNum -= 1;
+                 start = std::chrono::high_resolution_clock::now();
+            }
         }
         keyPress = 0;
         std::vector<cv::Point2f> cornerPts;
@@ -165,6 +168,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Calibration\n");
+    // camera.stopVideo();
 
     cv::Mat camMat, distCoeffs, R, T;
 
@@ -177,7 +181,7 @@ int main(int argc, char *argv[]) {
         cv::FileStorage cvFile(saveLoc, cv::FileStorage::WRITE);
         cvFile.write("Matrix", newMat);
         cvFile.write("DistCoeffs", distCoeffs);
-        // cvFile.release();
+        cvFile.release();
     }
     else {
         printf("Failed to calibrate\n");
