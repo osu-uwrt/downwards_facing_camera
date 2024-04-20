@@ -1,0 +1,7 @@
+sudo su
+echo 1 > /sys/module/imx296/parameters/trigger_mode
+
+export LIBCAMERA_RPI_CONFIG_FILE=/usr/share/libcamera/pipeline/rpi/vc4/rpi_apps.yaml
+
+# add this to end of rpi_apps.yaml
+"camera_timeout_value_ms": 999999999

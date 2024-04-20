@@ -16,11 +16,11 @@
  9: 'torpedo_hole', 10: 'bin'}
 */
 int bins[] = {10};
-int table[] = {};
+int table[] = {11, 12, 13};
 
 static float iou(float* bbox1, float* bbox2) {
-    float area1 = bbox1[2] * bbox1[3] * 224 * 224;
-    float area2 = bbox2[2] * bbox2[3] * 224 * 224;
+    float area1 = bbox1[2] * bbox1[3] * 320 * 320;
+    float area2 = bbox2[2] * bbox2[3] * 320 * 320;
 
     /* If points are (x1, y1) (a1, b1) and (x2, y2) (a2, b2)
        Then the intersection width would be the furthest left "right edge"
@@ -35,8 +35,8 @@ static float iou(float* bbox1, float* bbox2) {
     float bb =
         std::min<float>(bbox1[1] + (bbox1[3] / 2), bbox2[1] + (bbox1[3] / 2));
 
-    float intersectionWidth = std::max<float>(0, (aa - xx) * 224);
-    float intersectionHeight = std::max<float>(0, (bb - yy) * 224);
+    float intersectionWidth = std::max<float>(0, (aa - xx) * 320);
+    float intersectionHeight = std::max<float>(0, (bb - yy) * 320);
 
     float intersectionArea = intersectionWidth * intersectionHeight;
 
