@@ -16,6 +16,7 @@ Imaging Steps:
   - libjpeg62-turbo-dev
   - can-utils
   - screen
+  - git
  - Clone files:
    - Mkdir osu-uwrt
    - Clone repo into directory
