@@ -115,17 +115,17 @@ int main()
     mapsFile["Right_Stereo_Map_y"] >> Right_Stereo_Map2;
     mapsFile.release();
 
-    Right_Stereo_Map2.convertTo(Right_Stereo_Map2, CV_16UC1);
+    //Right_Stereo_Map2.convertTo(Right_Stereo_Map2, CV_16UC1);
     leftStereo->setMinDisparity(0);
     leftStereo->setNumDisparities(128);
     leftStereo->setBlockSize(55); // 15
     leftStereo->setPreFilterType(1);
     leftStereo->setPreFilterSize(7);
-    leftStereo->setPreFilterCap(62);
-    leftStereo->setTextureThreshold(100);
+    leftStereo->setPreFilterCap(31);
+    leftStereo->setTextureThreshold(0);
     leftStereo->setUniquenessRatio(0);
-    leftStereo->setSpeckleRange(100);
-    leftStereo->setSpeckleWindowSize(3);
+    leftStereo->setSpeckleRange(0);
+    leftStereo->setSpeckleWindowSize(5);
     leftStereo->setDisp12MaxDiff(-1);
 
     float M = 126.52103;
@@ -160,22 +160,22 @@ int main()
 
     time_t start = time(0);
 
-    // cv::namedWindow("disparity",cv::WINDOW_NORMAL);
-    // cv::resizeWindow("disparity",600,600);
+//    cv::namedWindow("disparity",cv::WINDOW_NORMAL);
+//    cv::resizeWindow("disparity",600,600);
 
-    // // Creating trackbars to dynamically update the StereoBM parameters
-    // cv::createTrackbar("numDisparities", "disparity", &numDisparities, 18, on_trackbar1);
-    // cv::createTrackbar("blockSize", "disparity", &blockSize, 50, on_trackbar2);
-    // cv::createTrackbar("preFilterType", "disparity", &preFilterType, 1, on_trackbar3);
-    // cv::createTrackbar("preFilterSize", "disparity", &preFilterSize, 25, on_trackbar4);
-    // cv::createTrackbar("preFilterCap", "disparity", &preFilterCap, 62, on_trackbar5);
-    // cv::createTrackbar("textureThreshold", "disparity", &textureThreshold, 100, on_trackbar6);
-    // cv::createTrackbar("uniquenessRatio", "disparity", &uniquenessRatio, 100, on_trackbar7);
-    // cv::createTrackbar("speckleRange", "disparity", &speckleRange, 100, on_trackbar8);
-    // cv::createTrackbar("speckleWindowSize", "disparity", &speckleWindowSize, 25, on_trackbar9);
-    // // cv::createTrackbar("disp12MaxDiff", "disparity", &disp12MaxDiff, 25, on_trackbar10);
-    // cv::createTrackbar("minDisparity", "disparity", &minDisparity, 25, on_trackbar11);
-
+/*    // // Creating trackbars to dynamically update the StereoBM parameters
+    cv::createTrackbar("numDisparities", "disparity", &numDisparities, 18, on_trackbar1);
+    cv::createTrackbar("blockSize", "disparity", &blockSize, 50, on_trackbar2);
+    cv::createTrackbar("preFilterType", "disparity", &preFilterType, 1, on_trackbar3);
+    cv::createTrackbar("preFilterSize", "disparity", &preFilterSize, 25, on_trackbar4);
+    cv::createTrackbar("preFilterCap", "disparity", &preFilterCap, 62, on_trackbar5);
+    cv::createTrackbar("textureThreshold", "disparity", &textureThreshold, 100, on_trackbar6);
+    cv::createTrackbar("uniquenessRatio", "disparity", &uniquenessRatio, 100, on_trackbar7);
+    cv::createTrackbar("speckleRange", "disparity", &speckleRange, 100, on_trackbar8);
+    cv::createTrackbar("speckleWindowSize", "disparity", &speckleWindowSize, 25, on_trackbar9);
+    cv::createTrackbar("disp12MaxDiff", "disparity", &disp12MaxDiff, 25, on_trackbar10);
+    cv::createTrackbar("minDisparity", "disparity", &minDisparity, 25, on_trackbar11);
+*/
     while (ch != 27)
     {
         sendSerial();
@@ -213,9 +213,10 @@ int main()
             cv::circle(disparity, cv::Point(320, 180), 5, cv::Scalar(0, 255, 0), 5);
 
             // cv::resize(leftNice, leftNice, cv::Size(728, 544));
-            // cv::imshow("Video", leftNice);
-            // cv::imshow("Video1", rightNice);
-            cv::imshow("Video", disparity);
+            //cv::imshow("Video", leftNice);
+            //cv::imshow("Video1", rightNice);
+            //cv::imshow("Video", leftDisp);
+	    cv::imshow("Video",  disparity);
             
             ch = cv::waitKey(10);
 

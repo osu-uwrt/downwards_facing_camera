@@ -89,8 +89,8 @@ int main(int argc, char *argv[]) {
     while (i < totalImages) {
         int currentNum = 1;
         auto start = std::chrono::high_resolution_clock::now();
-        while (keyPress != 'c') {
-        // while (currentNum > -1) {
+        //while (keyPress != 'c') {
+        while (currentNum > -1) {
             sendSerial();
             if (!camL.getVideoFrame(leftIm, 99999999) || !camR.getVideoFrame(rightIm, 99999999)) {
                 printf("Cannot grab video frame\n");
@@ -103,6 +103,7 @@ int main(int argc, char *argv[]) {
             std::string displayText = std::to_string(i + 1) + "/" + std::to_string(totalImages);
             cv::putText(vis, displayText, cv::Point(60, leftIm.rows - 200), cv::FONT_HERSHEY_PLAIN, 4,
                         cv::Scalar(0, 255, 0), 5);
+	    cv::cvtColor(vis, vis, cv::COLOR_GRAY2RGB);
             // cv::resize(vis, vis, cv::Size(vis.cols / 1.75, vis.rows / 1.75));
             if (useCan) {
                 imageTx->transmitImage(vis);
@@ -118,12 +119,12 @@ int main(int argc, char *argv[]) {
                 start = std::chrono::high_resolution_clock::now();
             }
         }
-        // char *filename = new char[100];
-        // sprintf(filename, "/home/pi/202404161747_StereoImgs/Left_%i.png", i);
-        // leftIm = cv::imread(filename);
-        // filename = new char[100];
-        // sprintf(filename, "/home/pi/202404161747_StereoImgs/Right_%i.png", i);
-        // rightIm = cv::imread(filename);
+        //char *filename = new char[100];
+        //sprintf(filename, "/home/pi/202404161747_StereoImgs/Left_%i.png", i);
+        //leftIm = cv::imread(filename);
+        //filename = new char[100];
+        //sprintf(filename, "/home/pi/202404161747_StereoImgs/Right_%i.png", i);
+        //rightIm = cv::imread(filename);
 
         std::vector<cv::Point2f> leftCorners, rightCorners;
         bool leftFound = cv::findChessboardCornersSB(leftIm, patternSize, leftCorners);

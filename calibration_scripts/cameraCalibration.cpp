@@ -120,6 +120,7 @@ int main(int argc, char *argv[]) {
             std::string progressText = std::to_string(i + 1) + '/' + std::to_string(totalImages);
             cv::putText(displayImage, progressText, cv::Point2d(image.cols - 200, 60), cv::FONT_HERSHEY_PLAIN, 4,
                         cv::Scalar(0, 255, 0), 5);
+	    cv::cvtColor(displayImage, displayImage, cv::COLOR_GRAY2RGB);
 
             if (useCan) {
                 imageTx->transmitImage(displayImage);

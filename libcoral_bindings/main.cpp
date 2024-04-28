@@ -11,11 +11,12 @@ int detectionType = 0; // 0: No classes 1: Table 2: Bins
 
 int main(int argc, char* argv[]) {
     auto yolo = createCoralYolo(
-        "/home/pi/Buoy_Gate_Torpedo_300_Rotation360_2575_Mirror_Nano_full_integer_quant_edgetpu.tflite",
+        "/home/pi/BinZoomCrop_full_integer_quant_edgetpu.tflite",
         80, std::stof(argv[1]), std::stof(argv[2]));
 
-    cv::Mat image = cv::imread("/home/pi/template_small.bmp", cv::IMREAD_ANYCOLOR);
-    cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
+    cv::Mat image = cv::imread("/home/pi/test.jpg", cv::IMREAD_ANYCOLOR);
+    cv::resize(image, image, cv::Size(320, 320), cv::INTER_LINEAR);
+    //cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
 
     auto start = std::chrono::high_resolution_clock::now();
     yolo->preprocessImage(image.data);
