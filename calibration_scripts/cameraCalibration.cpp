@@ -1,4 +1,4 @@
-#include "calbration/cameraCalibration.hpp"
+#include "calibration/cameraCalibration.hpp"
 
 #include "lccv.hpp"
 #include "tools/CanmoreImageTransmitter.hpp"
