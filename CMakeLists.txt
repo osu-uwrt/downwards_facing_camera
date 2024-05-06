@@ -16,7 +16,7 @@ add_executable(runCameras libcoral_bindings/main.cpp tools/mySerial.cpp)
 add_executable(cameraDetect src/main.cpp tools/mySerial.cpp)
 add_executable(intrCalibration calibration_scripts/cameraCalibration.cpp tools/mySerial.cpp tools/CanmoreImageTransmitter.cpp)
 add_executable(stereoCalibration calibration_scripts/stereoCalibration.cpp tools/mySerial.cpp tools/CanmoreImageTransmitter.cpp)
-add_executable(arucoCal calibration_scripts/arucoCalibration.cpp)
+add_executable(arucoCal calibration_scripts/arucoCalibration.cpp calibration_scripts/pointGenerator.cpp)
 
 add_custom_target(calibration DEPENDS intrCalibration stereoCalibration arucoCal)
 

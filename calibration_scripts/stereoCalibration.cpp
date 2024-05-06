@@ -1,5 +1,5 @@
 
-#include "stereoCalibration.hpp"
+#include "calibraiton/stereoCalibration.hpp"
 
 #include "lccv.hpp"
 #include "tools/CanmoreImageTransmitter.hpp"

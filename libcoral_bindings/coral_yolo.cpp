@@ -146,6 +146,7 @@ class CoralYolo : public CoralYoloItf {
                 }
             }
             bool partOfTask = false;
+            task = 0;
             if (task == 1) {
                 partOfTask = std::find(std::begin(table), std::end(table), detection.classId) != std::end(table);
             } else {
