@@ -1,6 +1,8 @@
 #include "opencv2/opencv.hpp"
 #include "opencv2/aruco.hpp"
 
+#include "calibration/pointGenerator.hpp"
+
 #include <lccv.hpp>
 
 void createCamera(lccv::PiCamera &camera_, int id)
@@ -26,6 +28,8 @@ int main(int argc, char *argv[]) {
     cv::aruco::Dictionary dict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_5X5_50);
     cv::aruco::ArucoDetector detector(dict, params);
 
+    std::vector<std::pair<cv::Point2f, cv::Point2f>> points = generateIntrPoints(cv::Size(cam_0.options->video_width, cam_0.options->video_height));
+
     while (ch != 27) {
         if (!cam_0.getVideoFrame(cam_0_im, 99999999))
         {
@@ -46,6 +50,12 @@ int main(int argc, char *argv[]) {
                 tag1Corners = markerCorners[i];
             }
         }
+
+        for (std::pair<cv::Point2f, cv::Point2f> tagLocs : points) {
+            cv::circle(cam_0_im, tagLocs.first, 5, cv::Scalar(255, 0, 0), 2);
+            cv::circle(cam_0_im, tagLocs.second, 5, cv::Scalar(255, 0, 0), 2);
+        }
+
         if (tag0Corners.size() > 0 && tag1Corners.size() > 0) {
             cv::Mat mean;
             cv::reduce(tag0Corners, mean, 01, cv::REDUCE_AVG);
