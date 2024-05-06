@@ -8,7 +8,7 @@ cv::Size boardSize(tagDistance + tagSize, boardHeight);
 
 cv::Size2f sensorSize(5.08556, 3.71847); // Calculated from 6.3mm diagonal and aspect ratio
 
-std::vector<double> depths1 = {430}; // Depths for 1x1 grid
+std::vector<double> depths1 = {430, 600}; // Depths for 1x1 grid
 std::vector<double> depths2 = {}; // Depths for 2x2 grid
 std::vector<double> depths3 = {1200}; // Depths for 3x3 grid
 
@@ -20,8 +20,8 @@ std::vector<std::pair<cv::Point2f, cv::Point2f>> generateIntrPoints(cv::Size ima
         planeSize.width = depth * sensorSize.width / focalLen;
         planeSize.height = depth * sensorSize.height / focalLen;
 
-        double numPixFromWidthEdge = (planeSize.width - boardSize.width + tagSize / 2) / planeSize.width * imageSize.width;
-        double numPixFromHeightEdge = (planeSize.height - boardSize.height) / planeSize.height * imageSize.height;
+        double numPixFromWidthEdge = ((planeSize.width - boardSize.width) / 2 + tagSize / 2) / planeSize.width * imageSize.width;
+        double numPixFromHeightEdge = imageSize.height / 2;
 
         cv::Point2f tag0Pos(numPixFromWidthEdge, numPixFromHeightEdge);
         cv::Point2f tag1Pos(imageSize.width - numPixFromWidthEdge, numPixFromHeightEdge);
