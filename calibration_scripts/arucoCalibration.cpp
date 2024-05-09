@@ -3,7 +3,12 @@
 
 #include "calibration/pointGenerator.hpp"
 
-#include <lccv.hpp>
+#include "lccv.hpp"
+#include <unistd.h>
+
+void sendSerial() {
+    serialPort.Send('\x00');
+}
 
 void createCamera(lccv::PiCamera &camera_, int id)
 {
@@ -20,6 +25,10 @@ int main(int argc, char *argv[]) {
     createCamera(cam_0, 0);
     cam_0.startVideo();
 
+    for (int i = 0; i < 8; i++) {
+        sendSerial();
+    }
+
     char ch = 0;
 
     cv::Mat cam_0_im, vis;
@@ -30,9 +39,10 @@ int main(int argc, char *argv[]) {
 
     cv::Size patternSize_(6, 8);
 
-    std::vector<std::pair<cv::Point2f, cv::Point2f>> points = generateIntrPoints(cv::Size(cam_0.options->video_width, cam_0.options->video_height));
+    std::vector<CalibrationPose> points = generateIntrPoints(cv::Size(cam_0.options->video_width, cam_0.options->video_height));
 
     while (ch != 27) {
+        sendSerial();
         if (!cam_0.getVideoFrame(cam_0_im, 99999999))
         {
             std::cout << "Timeout error " << std::endl;
@@ -55,10 +65,10 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        std::pair<cv::Point2f, cv::Point2f> tagLoc = points[1];
+        CalibrationPose tagLoc = points[std::stoi(argv[1])];
 
-        cv::circle(vis, tagLoc.first, 5, cv::Scalar(255, 0, 0), 5);
-        cv::circle(vis, tagLoc.second, 5, cv::Scalar(255, 0, 0), 5);
+        cv::circle(vis, tagLoc.tag0Pos, 5, cv::Scalar(255, 0, 0), 5);
+        cv::circle(vis, tagLoc.tag1Pos, 5, cv::Scalar(0, 0, 255), 5);
 
 
         if (tag0Corners.size() > 0 && tag1Corners.size() > 0) {
@@ -68,10 +78,8 @@ int main(int argc, char *argv[]) {
             cv::reduce(tag1Corners, mean, 01, cv::REDUCE_AVG);
             cv::Point2f tag1Pos(mean.at<float>(0, 0), mean.at<float>(0, 1));
 
-            
-
-            double tag0dist = cv::norm(tagLoc.first - tag0Pos);
-            double tag1dist = cv::norm(tagLoc.second - tag1Pos);
+            double tag0dist = cv::norm(tagLoc.tag0Pos - tag0Pos);
+            double tag1dist = cv::norm(tagLoc.tag1Pos - tag1Pos);
 
             if (tag0dist < 10 && tag1dist < 10) {
                 cv::Mat grayIm;
@@ -85,15 +93,16 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            printf("Tag 0 pos: %f, %f\n", tag0Pos.x, tag0Pos.y);
-            printf("Tag 1 pos: %f, %f\n", tag1Pos.x, tag1Pos.y);
+            // printf("Tag 0 pos: %f, %f\n", tag0Pos.x, tag0Pos.y);
+            // printf("Tag 1 pos: %f, %f\n", tag1Pos.x, tag1Pos.y);
         }
 
         // printf("%d markers detected\n", markerIds.size());
 
         cv::imshow("Image", vis);
-        ch = cv::waitKey(5);
+        ch = cv::waitKey(1);
     }
     cv::destroyAllWindows();
+    exit(0);
     cam_0.stopVideo();
 }

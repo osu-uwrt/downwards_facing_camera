@@ -201,4 +201,5 @@ int main(int argc, char *argv[]) {
     cvFile.write("Right_Stereo_Map_x", stereoMapRX);
     cvFile.write("Right_Stereo_Map_y", stereoMapRY);
     cvFile.release();
+    exit(0);
 }

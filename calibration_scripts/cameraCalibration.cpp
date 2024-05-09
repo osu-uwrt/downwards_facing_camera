@@ -187,5 +187,6 @@ int main(int argc, char *argv[]) {
     else {
         printf("Failed to calibrate\n");
     }
+    exit(0);
     return 0;
 }
