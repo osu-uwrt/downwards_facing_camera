@@ -63,7 +63,7 @@ std::vector<CalibrationPose> generateIntrPoints(cv::Size imageSize) {
         planeSize.width = depth * sensorSize.width / focalLen;
         planeSize.height = depth * sensorSize.height / focalLen;
 
-        double yPlaneLocs[] = { boardSize.height / 2, planeSize.height - boardSize.height / 2 };
+        double yPlaneLocs[] = {boardSize.height / 2, planeSize.height - boardSize.height / 2};
         double xPlaneLocs[] = { tagSize / 2, planeSize.width - boardSize.width + tagSize / 2 };
 
         for (int i = 0; i < 2; i++) {
@@ -101,17 +101,10 @@ std::vector<CalibrationPose> generateIntrPoints(cv::Size imageSize) {
         planeSize.width = depth * sensorSize.width / focalLen;
         planeSize.height = depth * sensorSize.height / focalLen;
 
-        double yPlaneLocs[] = { boardSize.height / 2, planeSize.height / 2, planeSize.height - boardSize.height / 2 };
+        double yPlaneLocs[] = {boardSize.height / 2, planeSize.height / 2, planeSize.height - boardSize.height / 2};
         double xPlaneLocs[] = { tagSize / 2, planeSize.width / 2 - boardSize.width / 2 + tagSize / 2,
                                 planeSize.width - boardSize.width + tagSize / 2 };
 
-        printf("Plane Size: %d, %d\n", planeSize.width, planeSize.height);
-        // printf("First pose: %f, %f\n", planeLocToPixelLoc(planeSize.width, xPlaneLocs[0], imageSize.width),
-        // planeLocToPixelLoc(planeSize.height, yPlaneLocs[0], imageSize.height));
-
-        // printf("First pose: %f, %f\n", planeLocToPixelLoc(planeSize.width, xPlaneLocs[0] + boardSize.width - tagSize
-        // / 2, imageSize.width), planeLocToPixelLoc(planeSize.height, yPlaneLocs[0] + boardSize.height - tagSize / 2,
-        // imageSize.height));
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 for (int k = 0; k < 3; k++) {
@@ -148,6 +141,8 @@ std::vector<CalibrationPose> generateIntrPoints(cv::Size imageSize) {
 std::vector<CalibrationPose> generateSterPoints(cv::Size imageSize) {
     std::vector<CalibrationPose> targetTagPoses;
 
+    double leftImShift = 120.0;
+
     for (double depth : sterDepths2) {
         cv::Size planeSize;
         planeSize.width = depth * sensorSize.width / focalLen;
@@ -157,8 +152,8 @@ std::vector<CalibrationPose> generateSterPoints(cv::Size imageSize) {
         overlapSize.width = planeSize.width - baseline;
         overlapSize.height = planeSize.height;
 
-        double yOverlapLocs[] = { boardSize.height / 2, overlapSize.height - boardSize.height / 2 };
-        double xOverlapLocs[] = { tagSize / 2, overlapSize.width - boardSize.width + tagSize / 2 };
+        double yOverlapLocs[] = { 20.0 + boardSize.height / 2, overlapSize.height - boardSize.height / 2 - 20.0};
+        double xOverlapLocs[] = { tagSize / 2 + 20.0, overlapSize.width - boardSize.width + tagSize / 2  - 20.0};
 
         for (int i = 0; i < 2; i++) {
             for (int j = 0; j < 2; j++) {
@@ -168,13 +163,12 @@ std::vector<CalibrationPose> generateSterPoints(cv::Size imageSize) {
 
                     pose.direction = 0;
                     pose.tag0Pos =
-                        cv::Point2f(planeLocToPixelLoc(planeSize.width, xOverlapLocs[j], imageSize.width) + 120 * k,
+                        cv::Point2f(planeLocToPixelLoc(planeSize.width, xOverlapLocs[j] + baseline * k, imageSize.width),
                                     planeLocToPixelLoc(planeSize.height, yOverlapLocs[i], imageSize.height));
 
                     pose.tag1Pos =
-                        cv::Point2f(planeLocToPixelLoc(planeSize.width, xOverlapLocs[j] + boardSize.width - tagSize,
-                                                       imageSize.width) +
-                                        120 * k,
+                        cv::Point2f(planeLocToPixelLoc(planeSize.width, xOverlapLocs[j] + baseline * k + boardSize.width - tagSize,
+                                                       imageSize.width),
                                     planeLocToPixelLoc(planeSize.height, yOverlapLocs[i], imageSize.height));
 
                     targetTagPoses.push_back(pose);
@@ -195,12 +189,12 @@ std::vector<CalibrationPose> generateSterPoints(cv::Size imageSize) {
         double betweenHeightDiff = (overlapSize.height - boardSize.height) / 3;
         double betweenWidthDiff = (overlapSize.width - boardSize.width) / 3;
 
-        double yOverlapLocs[] = { boardSize.height / 2, boardSize.height / 2 + betweenHeightDiff,
+        double yOverlapLocs[] = { 20.0 + boardSize.height / 2, boardSize.height / 2 + betweenHeightDiff,
                                   overlapSize.height - boardSize.height / 2 - betweenHeightDiff,
-                                  overlapSize.height - boardSize.height / 2 };
-        double xOverlapLocs[] = { tagSize / 2, tagSize / 2 + betweenWidthDiff,
+                                  overlapSize.height - boardSize.height / 2 - 20.0};
+        double xOverlapLocs[] = { tagSize / 2 + 20.0, tagSize / 2 + betweenWidthDiff,
                                   overlapSize.width - boardSize.width + tagSize / 2 - betweenWidthDiff,
-                                  overlapSize.width - boardSize.width + tagSize / 2 };
+                                  overlapSize.width - boardSize.width + tagSize / 2  - 20.0};
 
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
@@ -209,12 +203,12 @@ std::vector<CalibrationPose> generateSterPoints(cv::Size imageSize) {
 
                     pose.direction = 0;
                     pose.tag0Pos =
-                        cv::Point2f(planeLocToPixelLoc(planeSize.width, xOverlapLocs[j], imageSize.width) + 120 * k,
+                        cv::Point2f(planeLocToPixelLoc(planeSize.width, xOverlapLocs[j] + baseline * k, imageSize.width),
                                     planeLocToPixelLoc(planeSize.height, yOverlapLocs[i], imageSize.height));
 
                     pose.tag1Pos =
-                        cv::Point2f(planeLocToPixelLoc(planeSize.width, xOverlapLocs[j] + boardSize.width - tagSize,
-                                                       imageSize.width) + 120 * k,
+                        cv::Point2f(planeLocToPixelLoc(planeSize.width, xOverlapLocs[j] + baseline * k + boardSize.width - tagSize,
+                                                       imageSize.width),
                                     planeLocToPixelLoc(planeSize.height, yOverlapLocs[i], imageSize.height));
 
                     targetTagPoses.push_back(pose);
@@ -222,6 +216,7 @@ std::vector<CalibrationPose> generateSterPoints(cv::Size imageSize) {
             }
         }
     }
+    return targetTagPoses;
 }
 
 int direction(std::vector<cv::Point2f> tag0corners, std::vector<cv::Point2f> tag1corners) {

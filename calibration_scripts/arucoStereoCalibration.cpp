@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
     cv::Mat leftIm, rightIm, leftVis, rightVis, vis;
 
     cv::aruco::DetectorParameters params = cv::aruco::DetectorParameters();
-    cv::aruco::Dictionary dict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_5X5_50);
+    cv::aruco::Dictionary dict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
     cv::aruco::ArucoDetector detector(dict, params);
 
     cv::Size patternSize_(6, 8);
@@ -105,12 +105,15 @@ int main(int argc, char *argv[]) {
         }
 
         // printf("PAST\n");
+        // printf("%d", points.size());
 
         cv::cvtColor(leftIm, leftVis, cv::COLOR_RGB2BGR);
         cv::cvtColor(rightIm, rightVis, cv::COLOR_RGB2BGR);
 
         CalibrationPose leftTagLoc = points[currentPose + 1];
         CalibrationPose rightTagLoc = points[currentPose];
+
+        // printf("Drawing circles\n");
 
         cv::circle(leftVis, leftTagLoc.tag0Pos, 5, cv::Scalar(127, 255, 255), 5);
         cv::circle(leftVis, leftTagLoc.tag1Pos, 5, cv::Scalar(0, 0, 255), 5);
@@ -121,6 +124,8 @@ int main(int argc, char *argv[]) {
         std::vector<int> leftMarkerIds, rightMarkerIds;
         std::vector<std::vector<cv::Point2f>> leftMarkerCorners, leftRejectedCandidates, rightMarkerCorners,
             rightRejectedCandidates;
+
+        // printf("Detecting Markers\n");
         detector.detectMarkers(leftIm, leftMarkerCorners, leftMarkerIds, leftRejectedCandidates);
 
         cv::aruco::drawDetectedMarkers(leftVis, leftMarkerCorners, leftMarkerIds);
@@ -130,6 +135,7 @@ int main(int argc, char *argv[]) {
         cv::aruco::drawDetectedMarkers(rightVis, rightMarkerCorners, rightMarkerIds);
 
         std::vector<cv::Point2f> leftTag0Corners, leftTag1Corners, rightTag0Corners, rightTag1Corners;
+        // printf("Determining Pos\n");
         for (int i = 0; i < leftMarkerIds.size(); i++) {
             if (leftMarkerIds[i] == 0) {
                 leftTag0Corners = leftMarkerCorners[i];
@@ -148,6 +154,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        // printf("Determining Dist\n");
         if (leftTag0Corners.size() > 0 && leftTag1Corners.size() > 0 && rightTag0Corners.size() > 0 &&
             rightTag1Corners.size() > 0) {
             cv::Mat mean;
@@ -187,8 +194,8 @@ int main(int argc, char *argv[]) {
 
                         currentPose += 2;
 
-                        cv::imwrite(saveFoldername + "Left_" + std::to_string(i) + ".png", leftIm);
-                        cv::imwrite(saveFoldername + "Right_" + std::to_string(i) + ".png", rightIm);
+                        cv::imwrite(saveFoldername + "Left_" + std::to_string(currentPose / 2) + ".png", leftIm);
+                        cv::imwrite(saveFoldername + "Right_" + std::to_string(currentPose / 2) + ".png", rightIm);
                         ch = 0;
                     }
                 }
@@ -214,29 +221,47 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        // if (ch == 'c') {
-        //     currentPose++;
-        // }
+        if (ch == 'c') {
+            currentPose += 2;
+        }
     }
 
-    cv::Mat camMat, distCoeffs, R, T;
+    cv::FileStorage leftIntrFile("/home/pi/Cam0Intr.xml", cv::FileStorage::READ);
+    cv::FileStorage rightIntrFile("/home/pi/Cam1Intr.xml", cv::FileStorage::READ);
 
-    bool calibrated = cv::calibrateCamera(objPts, imgPts, imageSize, camMat, distCoeffs, R, T);
-    if (calibrated) {
-        printf("Calibrated, finding optimal\n");
-        cv::Mat newMat = cv::getOptimalNewCameraMatrix(camMat, distCoeffs, imageSize, 1, imageSize);
-        printf("Writing to file\n");
-        std::string saveLoc = "/home/pi/Cam" + std::to_string(camId) + "Intr.xml";
-        cv::FileStorage cvFile(saveLoc, cv::FileStorage::WRITE);
-        cvFile.write("Matrix", newMat);
-        cvFile.write("DistCoeffs", distCoeffs);
-        cvFile.release();
+    cv::Mat camMatL, camMatR, camDCL, camDCR;
+    leftIntrFile["Matrix"] >> camMatL;
+    leftIntrFile["DistCoeffs"] >> camDCL;
+    rightIntrFile["Matrix"] >> camMatR;
+    rightIntrFile["DistCoeffs"] >> camDCR;
+    leftIntrFile.release();
+    rightIntrFile.release();
+
+    int flags = 0 | cv::CALIB_FIX_INTRINSIC;
+
+    cv::Mat R, T, E, F;
+    cv::TermCriteria criteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 30, 0.001);
+    double retS = cv::stereoCalibrate(objPts, leftCornersVector, rightCornersVector, camMatL, camDCL, camMatR, camDCR,
+                                      imageSize, R, T, E, F, flags, criteria);
+    if (retS) {
+        printf("Stereo Calibrated\n");
     }
     else {
-        printf("Failed to calibrate\n");
+        printf("Stereo Calibration Failed\n");
     }
 
-    cv::destroyAllWindows();
+    cv::Mat rectL, rectR, projL, projR, Q, roiL, roiR;
+    cv::stereoRectify(camMatL, camDCL, camMatR, camDCR, leftIm.size(), R, T, rectL, rectR, projL, projR, Q, 1);
+    cv::Mat stereoMapLX, stereoMapLY, stereoMapRX, stereoMapRY;
+    cv::initUndistortRectifyMap(camMatL, camDCL, rectL, projL, imageSize, CV_16SC2, stereoMapLX, stereoMapLY);
+    cv::initUndistortRectifyMap(camMatR, camDCR, rectR, projR, imageSize, CV_16SC2, stereoMapRX, stereoMapRY);
+    // printf("%d\n", stereoMapRY.type());
+
+    cv::FileStorage cvFile = cv::FileStorage("/home/pi/StereoMaps.xml", cv::FileStorage::WRITE);
+    cvFile.write("Left_Stereo_Map_x", stereoMapLX);
+    cvFile.write("Left_Stereo_Map_y", stereoMapLY);
+    cvFile.write("Right_Stereo_Map_x", stereoMapRX);
+    cvFile.write("Right_Stereo_Map_y", stereoMapRY);
+    cvFile.release();
     exit(0);
-    camL.stopVideo();
 }

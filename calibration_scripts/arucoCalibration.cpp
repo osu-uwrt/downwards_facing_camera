@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
     cv::Mat cam_0_im, vis;
 
     cv::aruco::DetectorParameters params  = cv::aruco::DetectorParameters();
-    cv::aruco::Dictionary dict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_5X5_50);
+    cv::aruco::Dictionary dict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
     cv::aruco::ArucoDetector detector(dict, params);
 
     cv::Size patternSize_(6, 8);
