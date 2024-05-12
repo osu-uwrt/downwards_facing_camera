@@ -2,13 +2,14 @@
 
 #include "lccv.hpp"
 #include "tools/CanmoreImageTransmitter.hpp"
+
 #include "canmore/client_ids.h"
 
 #include <chrono>
+#include <filesystem>
 #include <net/if.h>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
-#include <filesystem>
 #include <time.h>
 #include <unistd.h>
 
@@ -103,9 +104,9 @@ int main(int argc, char *argv[]) {
     while (i < totalImages) {
         currentNum = 1;
         while (currentNum > -1) {
-        // Press Q to advance
-        // while (keyPress != 'c') {
-            //auto start = std::chrono::high_resolution_clock::now();
+            // Press Q to advance
+            // while (keyPress != 'c') {
+            // auto start = std::chrono::high_resolution_clock::now();
             sendSerial();
             if (!camera.getVideoFrame(image, 10000)) {
                 printf("Couldn't grab frame\n");
@@ -120,7 +121,7 @@ int main(int argc, char *argv[]) {
             std::string progressText = std::to_string(i + 1) + '/' + std::to_string(totalImages);
             cv::putText(displayImage, progressText, cv::Point2d(image.cols - 200, 60), cv::FONT_HERSHEY_PLAIN, 4,
                         cv::Scalar(0, 255, 0), 5);
-	    cv::cvtColor(displayImage, displayImage, cv::COLOR_GRAY2RGB);
+            cv::cvtColor(displayImage, displayImage, cv::COLOR_GRAY2RGB);
 
             if (useCan) {
                 imageTx->transmitImage(displayImage);
@@ -129,15 +130,15 @@ int main(int argc, char *argv[]) {
             }
             else {
                 cv::imshow("Calibration", displayImage);
-		//usleep(75000);
+                // usleep(75000);
                 keyPress = cv::waitKey(100) & 255;
             }
 
             // For timebased images if you're doing it yourself
-             if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
-                     .count() >= 1) {
-                 currentNum -= 1;
-                 start = std::chrono::high_resolution_clock::now();
+            if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start)
+                    .count() >= 1) {
+                currentNum -= 1;
+                start = std::chrono::high_resolution_clock::now();
             }
         }
         keyPress = 0;

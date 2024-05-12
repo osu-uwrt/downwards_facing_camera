@@ -17,6 +17,8 @@ struct CalibrationPose {
 inline mySerial serialPort("/dev/ttyAMA4", 600);
 std::vector<CalibrationPose> generateIntrPoints(cv::Size imageSize);
 
+std::vector<CalibrationPose> generateSterPoints(cv::Size imageSize);
+
 int direction(std::vector<cv::Point2f> tag0corners, std::vector<cv::Point2f> tag1corners);
 
 #endif

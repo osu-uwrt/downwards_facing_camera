@@ -3,11 +3,12 @@
 
 #include "lccv.hpp"
 #include "tools/CanmoreImageTransmitter.hpp"
+
 #include "canmore/client_ids.h"
 
 #include <chrono>
-#include <net/if.h>
 #include <filesystem>
+#include <net/if.h>
 #include <opencv2/core/persistence.hpp>
 #include <opencv2/opencv.hpp>
 #include <unistd.h>
@@ -44,8 +45,9 @@ int main(int argc, char *argv[]) {
         else {
             printf("Displaying image over X server\n");
         }
-    } else {
-            printf("Displaying image over X server\n");
+    }
+    else {
+        printf("Displaying image over X server\n");
     }
 
     CanmoreImageTransmitter *imageTx;
@@ -89,7 +91,7 @@ int main(int argc, char *argv[]) {
     while (i < totalImages) {
         int currentNum = 1;
         auto start = std::chrono::high_resolution_clock::now();
-        //while (keyPress != 'c') {
+        // while (keyPress != 'c') {
         while (currentNum > -1) {
             sendSerial();
             if (!camL.getVideoFrame(leftIm, 99999999) || !camR.getVideoFrame(rightIm, 99999999)) {
@@ -103,13 +105,14 @@ int main(int argc, char *argv[]) {
             std::string displayText = std::to_string(i + 1) + "/" + std::to_string(totalImages);
             cv::putText(vis, displayText, cv::Point(60, leftIm.rows - 200), cv::FONT_HERSHEY_PLAIN, 4,
                         cv::Scalar(0, 255, 0), 5);
-	    cv::cvtColor(vis, vis, cv::COLOR_GRAY2RGB);
+            cv::cvtColor(vis, vis, cv::COLOR_GRAY2RGB);
             // cv::resize(vis, vis, cv::Size(vis.cols / 1.75, vis.rows / 1.75));
             if (useCan) {
                 imageTx->transmitImage(vis);
                 usleep(200000);
                 keyPress = imageTx->getKeypress();
-            } else {
+            }
+            else {
                 cv::imshow("Calibration", vis);
                 keyPress = cv::waitKey(1) & 255;
             }
@@ -119,12 +122,12 @@ int main(int argc, char *argv[]) {
                 start = std::chrono::high_resolution_clock::now();
             }
         }
-        //char *filename = new char[100];
-        //sprintf(filename, "/home/pi/202404161747_StereoImgs/Left_%i.png", i);
-        //leftIm = cv::imread(filename);
-        //filename = new char[100];
-        //sprintf(filename, "/home/pi/202404161747_StereoImgs/Right_%i.png", i);
-        //rightIm = cv::imread(filename);
+        // char *filename = new char[100];
+        // sprintf(filename, "/home/pi/202404161747_StereoImgs/Left_%i.png", i);
+        // leftIm = cv::imread(filename);
+        // filename = new char[100];
+        // sprintf(filename, "/home/pi/202404161747_StereoImgs/Right_%i.png", i);
+        // rightIm = cv::imread(filename);
 
         std::vector<cv::Point2f> leftCorners, rightCorners;
         bool leftFound = cv::findChessboardCornersSB(leftIm, patternSize, leftCorners);
@@ -163,7 +166,7 @@ int main(int argc, char *argv[]) {
 
     // camL.stopVideo();
     // camR.stopVideo();
-    
+
     cv::FileStorage leftIntrFile("/home/pi/Cam0Intr.xml", cv::FileStorage::READ);
     cv::FileStorage rightIntrFile("/home/pi/Cam1Intr.xml", cv::FileStorage::READ);
 
