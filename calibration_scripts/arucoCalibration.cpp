@@ -1,10 +1,9 @@
-#include "opencv2/opencv.hpp"
-#include "opencv2/aruco.hpp"
-
 #include "calibration/pointGenerator.hpp"
-
 #include "lccv.hpp"
+#include "opencv2/aruco.hpp"
+#include "opencv2/opencv.hpp"
 #include "tools/CanmoreImageTransmitter.hpp"
+
 #include "canmore/client_ids.h"
 
 #include <filesystem>
@@ -21,15 +20,13 @@ void sendSerial() {
     serialPort.Send('\x00');
 }
 
-void createCamera(lccv::PiCamera &camera_, int id)
-{
+void createCamera(lccv::PiCamera &camera_, int id) {
     camera_.options->camera = id;
     camera_.options->video_width = 640;
     camera_.options->video_height = 360;
     camera_.options->framerate = 60;
     // camera_.options->verbose = true;
 }
-
 
 int main(int argc, char *argv[]) {
     lccv::PiCamera cam_0;
@@ -96,7 +93,7 @@ int main(int argc, char *argv[]) {
 
     cv::Mat cam_0_im, vis;
 
-    cv::aruco::DetectorParameters params  = cv::aruco::DetectorParameters();
+    cv::aruco::DetectorParameters params = cv::aruco::DetectorParameters();
     cv::aruco::Dictionary dict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
     cv::aruco::ArucoDetector detector(dict, params);
 
@@ -113,8 +110,7 @@ int main(int argc, char *argv[]) {
     while (currentPose < points.size()) {
         sendSerial();
         // printf("NOT PAST\n");
-        if (!cam_0.getVideoFrame(cam_0_im, 99999999))
-        {
+        if (!cam_0.getVideoFrame(cam_0_im, 99999999)) {
             std::cout << "Timeout error " << std::endl;
         }
 
@@ -128,16 +124,16 @@ int main(int argc, char *argv[]) {
 
         if (tagLoc.direction == 0) {
             disText = "Straight";
-        } else if (tagLoc.direction == 1) {
+        }
+        else if (tagLoc.direction == 1) {
             disText = "Left";
-        } else {
+        }
+        else {
             disText = "Right";
         }
-        cv::putText(vis, disText, cv::Point2d(0, 60), cv::FONT_HERSHEY_PLAIN, 3,
-                    cv::Scalar(255, 255, 255), 5);
-        
-        cv::putText(vis, disText, cv::Point2d(0, 60), cv::FONT_HERSHEY_PLAIN, 3,
-                    cv::Scalar(0, 0, 0), 3);
+        cv::putText(vis, disText, cv::Point2d(0, 60), cv::FONT_HERSHEY_PLAIN, 3, cv::Scalar(255, 255, 255), 5);
+
+        cv::putText(vis, disText, cv::Point2d(0, 60), cv::FONT_HERSHEY_PLAIN, 3, cv::Scalar(0, 0, 0), 3);
 
         cv::circle(vis, tagLoc.tag0Pos, 5, cv::Scalar(127, 255, 255), 5);
         cv::circle(vis, tagLoc.tag1Pos, 5, cv::Scalar(0, 0, 255), 5);
@@ -152,7 +148,8 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < markerIds.size(); i++) {
             if (markerIds[i] == 0) {
                 tag0Corners = markerCorners[i];
-            } else if (markerIds[i] == 1) {
+            }
+            else if (markerIds[i] == 1) {
                 tag1Corners = markerCorners[i];
             }
         }
@@ -177,15 +174,14 @@ int main(int argc, char *argv[]) {
                 if (found) {
                     cv::drawChessboardCorners(vis, patternSize_, cornerPts, found);
 
-                    if (ch == 'c') {
-                        objPts.push_back(objp);
-                        imgPts.push_back(cornerPts);
+                    objPts.push_back(objp);
+                    imgPts.push_back(cornerPts);
 
-                        currentPose++;
+                    currentPose++;
 
-                        cv::imwrite(saveFoldername + "/IntrImg_" + std::to_string(currentPose) + ".png", cam_0_im);
-                        ch = 0;
-                    }
+                    cv::imwrite(saveFoldername + "/IntrImg_" + std::to_string(currentPose) + ".png", cam_0_im);
+                    ch = 0;
+                    sleep(1);
                 }
             }
 
@@ -200,17 +196,13 @@ int main(int argc, char *argv[]) {
             usleep(200000);
         }
         else {
-        cv::imshow("Image", vis);
-        ch = cv::waitKey(1) & 255;
+            cv::imshow("Image", vis);
+            ch = cv::waitKey(1) & 255;
         }
 
         if (ch == 'q') {
             break;
         }
-
-        // if (ch == 'c') {
-        //     currentPose++;
-        // }
     }
 
     cv::Mat camMat, distCoeffs, R, T;

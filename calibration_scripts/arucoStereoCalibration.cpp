@@ -187,18 +187,16 @@ int main(int argc, char *argv[]) {
                     cv::drawChessboardCorners(leftVis, patternSize_, leftCornerPts, leftFound);
                     cv::drawChessboardCorners(rightVis, patternSize_, rightCornerPts, rightFound);
 
-                    if (ch == 'c') {
-                        objPts.push_back(objp);
-                        leftCornersVector.push_back(leftCornerPts);
-                        rightCornersVector.push_back(rightCornerPts);
+                    objPts.push_back(objp);
+                    leftCornersVector.push_back(leftCornerPts);
+                    rightCornersVector.push_back(rightCornerPts);
 
-                        currentPose += 2;
+                    currentPose += 2;
 
-                        cv::imwrite(saveFoldername + "Left_" + std::to_string(currentPose / 2) + ".png", leftIm);
-                        cv::imwrite(saveFoldername + "Right_" + std::to_string(currentPose / 2) + ".png", rightIm);
-                        ch = 0;
-                    }
-                }
+                    cv::imwrite(saveFoldername + "Left_" + std::to_string(currentPose / 2) + ".png", leftIm);
+                    cv::imwrite(saveFoldername + "Right_" + std::to_string(currentPose / 2) + ".png", rightIm);
+                    ch = 0;
+                 }
             }
 
             // printf("Tag 0 pos: %f, %f\n", tag0Pos.x, tag0Pos.y);
@@ -219,10 +217,6 @@ int main(int argc, char *argv[]) {
 
         if (ch == 'q') {
             break;
-        }
-
-        if (ch == 'c') {
-            currentPose += 2;
         }
     }
 
