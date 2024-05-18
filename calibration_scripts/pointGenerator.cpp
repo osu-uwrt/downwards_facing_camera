@@ -63,8 +63,8 @@ std::vector<CalibrationPose> generateIntrPoints(cv::Size imageSize) {
         planeSize.width = depth * sensorSize.width / focalLen;
         planeSize.height = depth * sensorSize.height / focalLen;
 
-        double yPlaneLocs[] = {boardSize.height / 2, planeSize.height - boardSize.height / 2};
-        double xPlaneLocs[] = { tagSize / 2, planeSize.width - boardSize.width + tagSize / 2 };
+        double yPlaneLocs[] = { 20.0 + boardSize.height / 2, planeSize.height - boardSize.height / 2 - 20.0};
+        double xPlaneLocs[] = { tagSize / 2 + 20.0, planeSize.width - boardSize.width + tagSize / 2 - 20.0 };
 
         for (int i = 0; i < 2; i++) {
             for (int j = 0; j < 2; j++) {
@@ -101,9 +101,9 @@ std::vector<CalibrationPose> generateIntrPoints(cv::Size imageSize) {
         planeSize.width = depth * sensorSize.width / focalLen;
         planeSize.height = depth * sensorSize.height / focalLen;
 
-        double yPlaneLocs[] = {boardSize.height / 2, planeSize.height / 2, planeSize.height - boardSize.height / 2};
-        double xPlaneLocs[] = { tagSize / 2, planeSize.width / 2 - boardSize.width / 2 + tagSize / 2,
-                                planeSize.width - boardSize.width + tagSize / 2 };
+        double yPlaneLocs[] = {boardSize.height / 2 + 20.0, planeSize.height / 2, planeSize.height - boardSize.height / 2 - 20.0};
+        double xPlaneLocs[] = { tagSize / 2 + 20.0, planeSize.width / 2 - boardSize.width / 2 + tagSize / 2,
+                                planeSize.width - boardSize.width + tagSize / 2  - 20.0};
 
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
