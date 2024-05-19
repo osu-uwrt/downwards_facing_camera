@@ -42,64 +42,75 @@ int dispType = CV_16S;
 
 
 cv::Ptr<cv::StereoBM> leftStereo = cv::StereoBM::create(0);
+cv::Ptr<cv::StereoBM> rightStereo = cv::StereoBM::create(0);
 
 static void on_trackbar1( int, void* )
 {
   leftStereo->setNumDisparities(numDisparities*16);
+  rightStereo->setNumDisparities(numDisparities*16);
   numDisparities = numDisparities*16;
 }
  
 static void on_trackbar2( int, void* )
 {
   leftStereo->setBlockSize(blockSize*2+5);
+  rightStereo->setBlockSize(blockSize*2+5);
   blockSize = blockSize*2+5;
 }
  
 static void on_trackbar3( int, void* )
 {
   leftStereo->setPreFilterType(preFilterType);
+  rightStereo->setPreFilterType(preFilterType);
 }
  
 static void on_trackbar4( int, void* )
 {
   leftStereo->setPreFilterSize(preFilterSize*2+5);
+  rightStereo->setPreFilterSize(preFilterSize*2+5);
   preFilterSize = preFilterSize*2+5;
 }
  
 static void on_trackbar5( int, void* )
 {
   leftStereo->setPreFilterCap(preFilterCap);
+  rightStereo->setPreFilterCap(preFilterCap);
 }
  
 static void on_trackbar6( int, void* )
 {
-  leftStereo->setTextureThreshold(textureThreshold);
+  rightStereo->setTextureThreshold(textureThreshold);
 }
  
 static void on_trackbar7( int, void* )
 {
   leftStereo->setUniquenessRatio(uniquenessRatio);
+  rightStereo->setUniquenessRatio(uniquenessRatio);
 }
  
 static void on_trackbar8( int, void* )
 {
   leftStereo->setSpeckleRange(speckleRange);
+  rightStereo->setSpeckleRange(speckleRange);
 }
  
 static void on_trackbar9( int, void* )
 {
   leftStereo->setSpeckleWindowSize(speckleWindowSize*2);
+  rightStereo->setSpeckleWindowSize(speckleWindowSize*2);
   speckleWindowSize = speckleWindowSize*2;
 }
  
 static void on_trackbar10( int, void* )
 {
   leftStereo->setDisp12MaxDiff(disp12MaxDiff);
+  rightStereo->setDisp12MaxDiff(disp12MaxDiff);
 }
  
 static void on_trackbar11( int, void* )
 {
   leftStereo->setMinDisparity(minDisparity);
+  rightStereo->setMinDisparity(minDisparity);
 }
 
 int main()
@@ -136,8 +147,8 @@ int main()
     wslFilter->setSigmaColor(2.0);
     cv::Mat disparity;
 
-    // cv::namedWindow("Video", cv::WINDOW_NORMAL);
-    // cv::namedWindow("Video1", cv::WINDOW_NORMAL);
+     //cv::namedWindow("Video", cv::WINDOW_NORMAL);
+     //cv::namedWindow("Video1", cv::WINDOW_NORMAL);
 
     cv::Mat cam_0_im, cam_1_im, cam_0_gray, cam_1_gray;
     lccv::PiCamera cam_0, cam_1;
@@ -160,10 +171,10 @@ int main()
 
     time_t start = time(0);
 
-//    cv::namedWindow("disparity",cv::WINDOW_NORMAL);
-//    cv::resizeWindow("disparity",600,600);
+    cv::namedWindow("disparity",cv::WINDOW_NORMAL);
+    cv::resizeWindow("disparity",600,600);
 
-/*    // // Creating trackbars to dynamically update the StereoBM parameters
+    // // Creating trackbars to dynamically update the StereoBM parameters
     cv::createTrackbar("numDisparities", "disparity", &numDisparities, 18, on_trackbar1);
     cv::createTrackbar("blockSize", "disparity", &blockSize, 50, on_trackbar2);
     cv::createTrackbar("preFilterType", "disparity", &preFilterType, 1, on_trackbar3);
@@ -175,7 +186,7 @@ int main()
     cv::createTrackbar("speckleWindowSize", "disparity", &speckleWindowSize, 25, on_trackbar9);
     cv::createTrackbar("disp12MaxDiff", "disparity", &disp12MaxDiff, 25, on_trackbar10);
     cv::createTrackbar("minDisparity", "disparity", &minDisparity, 25, on_trackbar11);
-*/
+
     while (ch != 27)
     {
         sendSerial();
@@ -202,8 +213,8 @@ int main()
             // std::cout << disp.type() << std::endl;
             filteredDisp.convertTo(filteredDisp, CV_32F, 1.0);
             // leftDisp = leftDisp / (short) 16;
-            disparity = (filteredDisp/16.0f - (float)0)/((float)128);
-            // disparity = (disparity/16.0f - (float)minDisparity)/((float)numDisparities);
+            //disparity = (filteredDisp/16.0f - (float)0)/((float)128);
+            disparity = (disparity/16.0f - (float)minDisparity)/((float)numDisparities);
 
             short midDisp = leftDisp.at<short>(180, 320) / (short) 16;
             float distance = M / (float) midDisp;

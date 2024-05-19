@@ -47,7 +47,7 @@ std::vector<CalibrationPose> generateIntrPoints(cv::Size imageSize) {
             pose.tag0Pos = cv::Point2f(numPixFromWidthEdge, numPixFromHeightEdge);
             pose.tag1Pos = cv::Point2f(imageSize.width - numPixFromWidthEdge, numPixFromHeightEdge);
 
-            if (i != 0) {
+            if (i != 1) {
                 pose.tag0Pos.x += skewedDistPixelDiff / 2;
                 pose.tag1Pos.x -= skewedDistPixelDiff / 2;
             }
@@ -118,7 +118,7 @@ std::vector<CalibrationPose> generateIntrPoints(cv::Size imageSize) {
 
                     pose.direction = k;
 
-                    if (k != 0) {
+                    if (k != 1) {
                         double dist = cv::norm(pose.tag0Pos - pose.tag1Pos);
 
                         double skewedDist = dist * cos(PI / 6.0);

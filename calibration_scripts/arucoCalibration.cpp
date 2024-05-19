@@ -122,10 +122,10 @@ int main(int argc, char *argv[]) {
 
         std::string disText = "";
 
-        if (tagLoc.direction == 0) {
+        if (tagLoc.direction == 1) {
             disText = "Straight";
         }
-        else if (tagLoc.direction == 1) {
+        else if (tagLoc.direction == 0) {
             disText = "Left";
         }
         else {
@@ -197,6 +197,7 @@ int main(int argc, char *argv[]) {
         }
         else {
             cv::imshow("Image", vis);
+	    usleep(200000);
             ch = cv::waitKey(1) & 255;
         }
 
