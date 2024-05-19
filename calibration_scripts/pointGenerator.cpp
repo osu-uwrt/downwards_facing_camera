@@ -79,7 +79,7 @@ std::vector<CalibrationPose> generateIntrPoints(cv::Size imageSize) {
 
                     pose.direction = k;
 
-                    if (k != 0) {
+                    if (k != 1) {
                         double dist = cv::norm(pose.tag0Pos - pose.tag1Pos);
 
                         double skewedDist = dist * cos(PI / 6.0);

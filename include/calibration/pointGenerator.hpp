@@ -11,7 +11,7 @@
 struct CalibrationPose {
     cv::Point2f tag0Pos;
     cv::Point2f tag1Pos;
-    int direction; // 0: Straight, 1: Left, 2: Right
+    int direction; // 1: Straight, 0: Left, 2: Right
 };
 
 inline mySerial serialPort("/dev/ttyAMA4", 600);
