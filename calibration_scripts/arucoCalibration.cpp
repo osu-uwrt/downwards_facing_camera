@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
         cv::putText(vis, disText, cv::Point2d(0, 60), cv::FONT_HERSHEY_PLAIN, 3, cv::Scalar(0, 0, 0), 3);
 
         cv::circle(vis, tagLoc.tag0Pos, 5, cv::Scalar(127, 255, 255), 5);
-        cv::circle(vis, tagLoc.tag1Pos, 5, cv::Scalar(0, 0, 255), 5);
+        cv::circle(vis, tagLoc.tag1Pos, 5, cv::Scalar(127, 255, 255), 5);
 
         std::vector<int> markerIds;
         std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
@@ -187,12 +187,36 @@ int main(int argc, char *argv[]) {
 
             // printf("Tag 0 pos: %f, %f\n", tag0Pos.x, tag0Pos.y);
             // printf("Tag 1 pos: %f, %f\n", tag1Pos.x, tag1Pos.y);
-        }
+        } 
+	if (ch == 'c') {
+		cv::Mat grayIm;
+                cv::cvtColor(cam_0_im, grayIm, cv::COLOR_RGB2GRAY);
+
+                std::vector<cv::Point2f> cornerPts;
+                bool found = cv::findChessboardCornersSB(grayIm, patternSize_, cornerPts);
+
+                if (found) {
+                    cv::drawChessboardCorners(vis, patternSize_, cornerPts, found);
+
+                    objPts.push_back(objp);
+                    imgPts.push_back(cornerPts);
+
+                    currentPose++;
+
+                    cv::imwrite(saveFoldername + "/IntrImg_" + std::to_string(currentPose) + ".png", cam_0_im);
+                    ch = 0;
+                    sleep(1);
+                } else {
+			printf("Chessboard not found\n");
+		}
+		ch = 0;
+	}
 
         // printf("%d markers detected\n", markerIds.size());
 
         if (useCan) {
             imageTx->transmitImage(vis);
+	    ch = imageTx->getKeypress();
             usleep(200000);
         }
         else {

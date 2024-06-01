@@ -116,10 +116,10 @@ int main(int argc, char *argv[]) {
         // printf("Drawing circles\n");
 
         cv::circle(leftVis, leftTagLoc.tag0Pos, 5, cv::Scalar(127, 255, 255), 5);
-        cv::circle(leftVis, leftTagLoc.tag1Pos, 5, cv::Scalar(0, 0, 255), 5);
+        cv::circle(leftVis, leftTagLoc.tag1Pos, 5, cv::Scalar(127, 255, 255), 5);
 
         cv::circle(rightVis, rightTagLoc.tag0Pos, 5, cv::Scalar(127, 255, 255), 5);
-        cv::circle(rightVis, rightTagLoc.tag1Pos, 5, cv::Scalar(0, 0, 255), 5);
+        cv::circle(rightVis, rightTagLoc.tag1Pos, 5, cv::Scalar(127, 255, 255), 5);
 
         std::vector<int> leftMarkerIds, rightMarkerIds;
         std::vector<std::vector<cv::Point2f>> leftMarkerCorners, leftRejectedCandidates, rightMarkerCorners,
@@ -208,6 +208,7 @@ int main(int argc, char *argv[]) {
 
         if (useCan) {
             imageTx->transmitImage(vis);
+	    ch = imageTx->getKeypress();
             usleep(200000);
         }
         else {
