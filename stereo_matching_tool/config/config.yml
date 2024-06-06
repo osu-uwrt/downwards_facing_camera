@@ -1,0 +1,6 @@
+left_camera_config: "config/camera_cal/Left_Air.xml"
+right_camera_config: "config/camera_cal/Right_Air.xml"
+left_folder: "/Users/cam/Programming/marks_stereo/CalibrationImgs/Bin/Left"
+right_folder: "/Users/cam/Programming/marks_stereo/CalibrationImgs/Bin/Right"
+baseline: 120  # mm
+focal_length: 538.61896240031854
