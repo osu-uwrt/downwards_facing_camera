@@ -92,6 +92,8 @@ class ImageWindow(QtWidgets.QWidget):
 class StereoVisionApp(QtWidgets.QMainWindow):
     MODES = [cv2.STEREO_SGBM_MODE_SGBM, cv2.STEREO_SGBM_MODE_HH, cv2.STEREO_SGBM_MODE_SGBM_3WAY, cv2.STEREO_SGBM_MODE_HH4]
     MODE_NAMES = ["SGBM", "HH", "SGBM_3WAY", "HH4"]
+    PREFILTER_TYPES = [cv2.STEREO_BM_PREFILTER_NORMALIZED_RESPONSE, cv2.STEREO_BM_PREFILTER_XSOBEL]
+    PREFILTER_TYPE_NAMES = ["NORMALIZED_RESPONSE", "XSOBEL"]
 
     def __init__(self):
         super().__init__()
@@ -99,17 +101,20 @@ class StereoVisionApp(QtWidgets.QMainWindow):
         self.point_cloud_window = PointCloudWindow()
         self.depth_map_window = DepthMapWindow()
         self.stereo_view_window = StereoViewWindow()
+
         self.stereo_view_window.show()
 
         self.current_index = 0
         self.display_mode = "RGB"
         self.depth_map_color = True
         self.use_sgbm = True 
+        self.use_wls = False
         self.loadConfig()
         self.initUI()
         self.loadImagePaths()
         self.loadCameraParams()
         self.initData()
+        self.image_resized = False
         self.updateDisparity()
 
     def loadConfig(self):
@@ -126,33 +131,8 @@ class StereoVisionApp(QtWidgets.QMainWindow):
         self.main_layout = QtWidgets.QHBoxLayout(central_widget)
 
         self.left_panel = QtWidgets.QWidget()
-        self.left_panel.setFixedWidth(300)
+        self.left_panel.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Expanding)
         self.slider_layout = QtWidgets.QVBoxLayout(self.left_panel)
-
-        # Create buttons for navigating images
-        self.button_layout = QtWidgets.QHBoxLayout()
-        self.prev_button = QtWidgets.QPushButton('Previous')
-        self.next_button = QtWidgets.QPushButton('Next')
-        self.prev_button.clicked.connect(self.prevImage)
-        self.next_button.clicked.connect(self.nextImage)
-        self.button_layout.addWidget(self.prev_button)
-        self.button_layout.addWidget(self.next_button)
-        self.slider_layout.addLayout(self.button_layout)
-
-        # Create buttons for toggling display modes
-        self.display_button = QtWidgets.QPushButton('Toggle Display Mode')
-        self.display_button.clicked.connect(self.toggleDisplayMode)
-        self.slider_layout.addWidget(self.display_button)
-
-        # Create button for toggling depth map color
-        self.depth_map_button = QtWidgets.QPushButton('Toggle Depth Map Color')
-        self.depth_map_button.clicked.connect(self.toggleDepthMapColor)
-        self.slider_layout.addWidget(self.depth_map_button)
-
-        # Create button for toggling between SGBM and BM
-        self.toggle_algorithm_button = QtWidgets.QPushButton('Toggle SGBM/BM')
-        self.toggle_algorithm_button.clicked.connect(self.toggleAlgorithm)
-        self.slider_layout.addWidget(self.toggle_algorithm_button)
 
         # Create sliders for disparity parameters
         self.slider_params = {
@@ -167,6 +147,9 @@ class StereoVisionApp(QtWidgets.QMainWindow):
             "P1": (1, 3000, 216),
             "P2": (1, 12000, 864),
             "textureThreshold": (0, 100, 10),  # Only used for BM
+            "preFilterSize": (5, 255, 9),  # Added preFilterSize
+            "lambda": (8000, 80000, 8000),
+            "sigma": (0, 500, 150)
         }
 
         self.sliders = {}
@@ -194,6 +177,16 @@ class StereoVisionApp(QtWidgets.QMainWindow):
         self.slider_layout.addWidget(self.mode_label)
         self.slider_layout.addWidget(self.mode_slider)
 
+        self.prefiltertype_label = QtWidgets.QLabel(f"preFilterType: {self.PREFILTER_TYPE_NAMES[0]}")
+        self.prefiltertype_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.prefiltertype_slider.setMinimum(0)
+        self.prefiltertype_slider.setMaximum(len(self.PREFILTER_TYPES) - 1)
+        self.prefiltertype_slider.setValue(0)
+        self.prefiltertype_slider.valueChanged.connect(self.updateDisparity)
+        self.prefiltertype_slider.valueChanged.connect(lambda value: self.prefiltertype_label.setText(f"preFilterType: {self.PREFILTER_TYPE_NAMES[value]}"))
+        self.slider_layout.addWidget(self.prefiltertype_label)
+        self.slider_layout.addWidget(self.prefiltertype_slider)
+
         self.doffs_label = QtWidgets.QLabel("doffs: 0")
         self.doffs_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.doffs_slider.setMinimum(0)
@@ -207,7 +200,33 @@ class StereoVisionApp(QtWidgets.QMainWindow):
         self.main_layout.addWidget(self.left_panel)
 
         self.right_layout = QtWidgets.QVBoxLayout()
-        self.right_layout.addWidget(self.point_cloud_window, 1)
+        
+        self.button_panel = QtWidgets.QWidget()
+        self.button_layout = QtWidgets.QHBoxLayout(self.button_panel)
+        self.prev_button = QtWidgets.QPushButton('Previous')
+        self.next_button = QtWidgets.QPushButton('Next')
+        self.prev_button.clicked.connect(self.prevImage)
+        self.next_button.clicked.connect(self.nextImage)
+        self.button_layout.addWidget(self.prev_button)
+        self.button_layout.addWidget(self.next_button)
+
+        self.display_button = QtWidgets.QPushButton()
+        self.display_button.clicked.connect(self.toggleDisplayMode)
+        self.button_layout.addWidget(self.display_button)
+
+        self.depth_map_button = QtWidgets.QPushButton()
+        self.depth_map_button.clicked.connect(self.toggleDepthMapColor)
+        self.button_layout.addWidget(self.depth_map_button)
+
+        self.toggle_algorithm_button = QtWidgets.QPushButton()
+        self.toggle_algorithm_button.clicked.connect(self.toggleAlgorithm)
+        self.button_layout.addWidget(self.toggle_algorithm_button)
+
+        self.toggle_wls_button = QtWidgets.QPushButton()
+        self.toggle_wls_button.clicked.connect(self.toggleWLS)
+        self.button_layout.addWidget(self.toggle_wls_button)
+
+        self.right_layout.addWidget(self.button_panel, 0, QtCore.Qt.AlignTop)
 
         self.depth_map_container = QtWidgets.QWidget()
         self.depth_map_layout = QtWidgets.QVBoxLayout(self.depth_map_container)
@@ -215,9 +234,12 @@ class StereoVisionApp(QtWidgets.QMainWindow):
         self.depth_map_layout.addWidget(self.depth_map_window, alignment=QtCore.Qt.AlignCenter)
         self.right_layout.addWidget(self.depth_map_container, 0, QtCore.Qt.AlignTop)
 
+        self.right_layout.addWidget(self.point_cloud_window, 1)
+
         self.main_layout.addLayout(self.right_layout, 1)
 
-        self.updateSliders()  
+        self.updateSliders()
+        self.updateButtonLabels()
 
     def loadImagePaths(self):
         self.left_images = sorted([os.path.join(self.left_folder, img) for img in os.listdir(self.left_folder) if img.endswith('.png')])
@@ -235,6 +257,22 @@ class StereoVisionApp(QtWidgets.QMainWindow):
             if self.left_img is None or self.right_img is None:
                 print(f"Error: One or both images not found. Please check the file paths: {self.left_images[self.current_index]}, {self.right_images[self.current_index]}")
                 exit()
+
+            original_shape = self.left_img.shape
+            self.left_img = self.resize_image(self.left_img, 600, 400)
+            self.right_img = self.resize_image(self.right_img, 600, 400)
+
+            if self.left_img.shape != original_shape:
+                self.image_resized = True
+            else:
+                self.image_resized = False
+
+    def resize_image(self, img, max_width, max_height):
+        height, width = img.shape[:2]
+        if width > max_width or height > max_height:
+            scaling_factor = min(max_width / width, max_height / height)
+            img = cv2.resize(img, (int(width * scaling_factor), int(height * scaling_factor)))
+        return img
 
     def loadCameraParams(self):
         fs_left = cv2.FileStorage(self.config["left_camera_config"], cv2.FILE_STORAGE_READ)
@@ -263,15 +301,24 @@ class StereoVisionApp(QtWidgets.QMainWindow):
         current_index = modes.index(self.display_mode)
         self.display_mode = modes[(current_index + 1) % len(modes)]
         self.updateDisparity()
+        self.updateButtonLabels()
 
     def toggleDepthMapColor(self):
         self.depth_map_color = not self.depth_map_color
         self.updateDisparity()
+        self.updateButtonLabels()
 
     def toggleAlgorithm(self):
         self.use_sgbm = not self.use_sgbm
         self.updateSliders()
         self.updateDisparity()
+        self.updateButtonLabels()
+
+    def toggleWLS(self):
+        self.use_wls = not self.use_wls
+        self.updateSliders()
+        self.updateDisparity()
+        self.updateButtonLabels()
 
     def updateSliders(self):
         if self.use_sgbm:
@@ -281,6 +328,16 @@ class StereoVisionApp(QtWidgets.QMainWindow):
             self.sliders["P2"].setEnabled(True)
             self.mode_slider.setEnabled(True)
             self.sliders["textureThreshold"].setEnabled(False)
+            self.sliders["preFilterSize"].setEnabled(False)
+            self.prefiltertype_slider.setEnabled(False)
+
+            self.slider_labels["P1"].setEnabled(True)
+            self.slider_labels["P2"].setEnabled(True)
+            self.mode_label.setEnabled(True)
+            self.slider_labels["textureThreshold"].setEnabled(False)
+            self.slider_labels["preFilterSize"].setEnabled(False)
+            self.prefiltertype_label.setEnabled(False)
+
         else:
             self.sliders["blockSize"].setMinimum(5)
             self.sliders["blockSize"].setMaximum(255)
@@ -288,6 +345,29 @@ class StereoVisionApp(QtWidgets.QMainWindow):
             self.sliders["P2"].setEnabled(False)
             self.mode_slider.setEnabled(False)
             self.sliders["textureThreshold"].setEnabled(True)
+            self.sliders["preFilterSize"].setEnabled(True)
+            self.prefiltertype_label.setEnabled(True)
+            self.prefiltertype_slider.setEnabled(True)
+
+            self.slider_labels["P1"].setEnabled(False)
+            self.slider_labels["P2"].setEnabled(False)
+            self.mode_label.setEnabled(False)
+            self.slider_labels["textureThreshold"].setEnabled(True)
+            self.slider_labels["preFilterSize"].setEnabled(True)
+            self.prefiltertype_label.setEnabled(True)
+    
+        if self.use_wls:
+            self.sliders["lambda"].setEnabled(True)
+            self.sliders["sigma"].setEnabled(True)
+
+            self.slider_labels["lambda"].setEnabled(True)
+            self.slider_labels["sigma"].setEnabled(True)
+        else:
+            self.sliders["lambda"].setEnabled(False)
+            self.sliders["sigma"].setEnabled(False)
+
+            self.slider_labels["lambda"].setEnabled(False)
+            self.slider_labels["sigma"].setEnabled(False)
 
     def updateDisparity(self):
         self.loadImagePair()
@@ -306,8 +386,12 @@ class StereoVisionApp(QtWidgets.QMainWindow):
         P1 = self.sliders["P1"].value()
         P2 = self.sliders["P2"].value()
         texture_threshold = self.sliders["textureThreshold"].value()
+        pre_filter_size = self.sliders["preFilterSize"].value() | 1
+        pre_filter_type = self.PREFILTER_TYPES[self.prefiltertype_slider.value()]
         mode = self.MODES[self.mode_slider.value()]
         doffs = self.doffs_slider.value()
+        lmbda = self.sliders["lambda"].value()
+        sigma = self.sliders["sigma"].value() / 100
 
         left_img_gray = cv2.cvtColor(self.rectified_left, cv2.COLOR_BGR2GRAY)
         right_img_gray = cv2.cvtColor(self.rectified_right, cv2.COLOR_BGR2GRAY)
@@ -331,8 +415,8 @@ class StereoVisionApp(QtWidgets.QMainWindow):
                 numDisparities=num_disparities,
                 blockSize=block_size
             )
-            stereo.setPreFilterType(cv2.STEREO_BM_PREFILTER_XSOBEL)
-            stereo.setPreFilterSize(9)
+            stereo.setPreFilterType(pre_filter_type)
+            stereo.setPreFilterSize(pre_filter_size)
             stereo.setPreFilterCap(pre_filter_cap)
             stereo.setTextureThreshold(texture_threshold)
             stereo.setUniquenessRatio(uniqueness_ratio)
@@ -340,11 +424,27 @@ class StereoVisionApp(QtWidgets.QMainWindow):
             stereo.setSpeckleRange(speckle_range)
             stereo.setDisp12MaxDiff(disp12_max_diff)
 
+        right_stereo = cv2.ximgproc.createRightMatcher(stereo)
         disparity_map = stereo.compute(left_img_gray, right_img_gray).astype(np.float32) / 16.0
-        disparity_map[disparity_map < min_disparity] = min_disparity 
 
+        if self.use_wls:
+            
+            disparity_map_right = right_stereo.compute(right_img_gray, left_img_gray).astype(np.float32) / 16.0
+
+            wls_filter = cv2.ximgproc.createDisparityWLSFilter(stereo)
+            wls_filter.setLambda(lmbda)
+            wls_filter.setSigmaColor(sigma)
+
+            disparity_map = wls_filter.filter(disparity_map, left_img_gray, disparity_map_right=disparity_map_right)
+
+        else:
+            disparity_map_right = np.zeros(disparity_map.shape, dtype=np.float32)
+        
+        disparity_map[disparity_map < min_disparity] = min_disparity 
         depth_map = np.zeros(disparity_map.shape, dtype=np.float32)
-        depth_map[disparity_map > min_disparity] = self.baseline * self.focal_length / (disparity_map[disparity_map > min_disparity] + doffs)
+        epsilon = 1e-6  # Small value to prevent division by zero
+        valid_disparity_mask = disparity_map > (min_disparity + epsilon)
+        depth_map[valid_disparity_mask] = self.baseline * self.focal_length / (disparity_map[valid_disparity_mask] + doffs + epsilon)
 
         # Display depth map
         if self.depth_map_color:
@@ -371,15 +471,15 @@ class StereoVisionApp(QtWidgets.QMainWindow):
             colors_gray = cv2.cvtColor(colors_bgr, cv2.COLOR_BGR2GRAY)
             out_colors = cv2.cvtColor(colors_gray, cv2.COLOR_GRAY2RGB)[mask]
 
-        # There's a better way to do this but im lazy
+        # There's a better way to do this but I'm lazy
         rotation_matrix_x = np.array([[1, 0, 0],
-                                      [0, 0, -1],
-                                      [0, 1, 0]], dtype=np.float64)
+                                    [0, 0, -1],
+                                    [0, 1, 0]], dtype=np.float64)
         out_points = out_points.dot(rotation_matrix_x.T)
 
         rotation_matrix_y = np.array([[-1, 0, 0],
-                                      [0, 1, 0],
-                                      [0, 0, -1]], dtype=np.float64)
+                                    [0, 1, 0],
+                                    [0, 0, -1]], dtype=np.float64)
         out_points = out_points.dot(rotation_matrix_y.T)
 
         out_points[:, 2] = -out_points[:, 2]
@@ -416,6 +516,12 @@ class StereoVisionApp(QtWidgets.QMainWindow):
             self.current_index -= 1
             self.loadImagePair()
             self.updateDisparity()
+
+    def updateButtonLabels(self):
+        self.display_button.setText(f'Display Mode: {self.display_mode}')
+        self.depth_map_button.setText(f'Depth Map Color: {"On" if self.depth_map_color else "Off"}')
+        self.toggle_algorithm_button.setText(f'Algorithm: {"SGBM" if self.use_sgbm else "BM"}')
+        self.toggle_wls_button.setText(f'WLS Filter: {"On" if self.use_wls else "Off"}')
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
