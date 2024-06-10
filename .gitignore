@@ -11,3 +11,6 @@ micro_ros_raspi/libmicroros
 micro_ros_raspi/available_ros2_types
 micro_ros_raspi/built_packages
 micro_ros_raspi/libmicroros_aarch64.tgz
+
+captures
+src/venv
