@@ -135,7 +135,7 @@ int main(int argc, char *argv) {
             runStereo(Left_Stereo_Map1, Left_Stereo_Map2, Right_Stereo_Map1, Right_Stereo_Map2, leftStereo, rightStereo,
                       wslFilter, leftIm, rightIm, disparity);
 
-            cv::Mat depth_map = stereoConfig.baseline * stereoConfig.focalLen / disparity + stereoConfig.doffs + 1E-6;
+            cv::Mat depth_map = stereoConfig.baseline * stereoConfig.focalLen / (disparity + stereoConfig.doffs + 1E-6);
             // Run YOLO
 
             // Get objects
