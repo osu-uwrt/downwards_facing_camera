@@ -49,7 +49,7 @@ static float iou(float* bbox1, float* bbox2) {
 class CoralYolo : public CoralYoloItf {
    public:
     std::string model_path_;
-    int num_classes_, task;
+    int num_classes_, task_;
     int8_t int_min_conf_;
     float min_conf_, iou_thresh_;
 
@@ -146,8 +146,8 @@ class CoralYolo : public CoralYoloItf {
                 }
             }
             bool partOfTask = false;
-            task = 0;
-            if (task == 1) {
+            task_ = 0;
+            if (task_ == 1) {
                 partOfTask = std::find(std::begin(table), std::end(table), detection.classId) != std::end(table);
             } else {
                 partOfTask = std::find(std::begin(bins), std::end(bins), detection.classId) != std::end(bins);
@@ -226,6 +226,10 @@ class CoralYolo : public CoralYoloItf {
             processMask(newDetection, loc);
             detections.emplace_back(newDetection);
         }
+    }
+
+    void setTask(int task) {
+        task_ = task;
     }
 };
 

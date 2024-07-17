@@ -20,7 +20,7 @@ public:
         depthSet = true;
     }
     void setDetections(std::vector<Detection> &detOutput) {
-        detections = detOutput;
+        detections_ = detOutput;
         detectionsSet = true;
     }
     void getImages(cv::Mat &left, cv::Mat &right) {
@@ -32,10 +32,14 @@ public:
         depthMap = depth;
     }
 
+    void getDetections(std::vector<Detection> &detections) {
+        detections = detections_;
+    }
+
 private:
     bool depthSet, detectionsSet;
     cv::Mat leftIm, rightIm, depth;
-    std::vector<Detection> detections;
+    std::vector<Detection> detections_;
 };
 
 template <typename T>
@@ -99,8 +103,6 @@ T TSQueue<T>::pop()
 {
     // acquire lock
     std::unique_lock<std::mutex> lock(m_mutex);
-    // std::lock(lock);
-    // std::lock(lock);
 
     // retrieve item
     if (m_queue->empty())

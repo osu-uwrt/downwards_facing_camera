@@ -14,6 +14,8 @@ public:
 
     void startDetecting();
     void stopDetecting();
+
+    void setTask(int task);
 private:
     bool running, inferencing;
 

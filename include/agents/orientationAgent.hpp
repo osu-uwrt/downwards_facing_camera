@@ -19,6 +19,9 @@ private:
     bool producing, running;
     int ifIdx;
 
+    // TODO: SET THESE
+    cv::Mat lCamMat, lCamDist;
+
     MicroROSClient client;
     YoloAgent *yoloAgent;
 

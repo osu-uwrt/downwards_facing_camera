@@ -45,7 +45,7 @@ void YoloAgent::inference() {
 
             model->preprocessImage(resized.data);
             model->detectImage();
-    
+
             std::vector<Detection> detections;
             detections = model->processDetections();
             imageHandle.setDetections(detections);
@@ -53,4 +53,8 @@ void YoloAgent::inference() {
             yoloOutput.push(imageHandle);
         }
     }
+}
+
+void YoloAgent::setTask(int task) {
+    model->setTask(task);
 }

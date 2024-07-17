@@ -17,6 +17,8 @@ class CoralYoloItf {
     virtual void preprocessImage(uint8_t* image) = 0;
 
     virtual std::vector<Detection> processDetections() = 0;
+
+    void setTask(int task);
 };
 
 std::shared_ptr<CoralYoloItf> createCoralYolo(std::string model_path,
