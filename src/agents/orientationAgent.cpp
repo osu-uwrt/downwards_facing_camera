@@ -59,7 +59,7 @@ void OrientationAgent::produce() {
                 yoloAgent->setTask(targetTask);
                 YoloDepth inputs;
                 try {
-                    inputs = yoloAgent->output.pop();
+                    inputs = yoloAgent->yoloOutput.pop();
                 } catch (std::runtime_error &e) {
                     continue;
                 }
@@ -94,7 +94,7 @@ void OrientationAgent::produce() {
 
                         for (int i = 0; i < corners.size(); i++) {
                             if (mask.at(corners[i] * 4) == 1) {
-                                float depth = depthMap.at<float>(corners.at(i));
+                                float depth = depthMap.at<float>(corners.at(i).y, corners.at(i).x);
 
                                 corners3d.push_back(cv::Point3f(undistorted[i].x, undistorted[i].y, 1.) * depth);
                             }
@@ -102,7 +102,7 @@ void OrientationAgent::produce() {
 
                         if (corners3d.size() > 5) {
                             cv::Mat meanMat;
-                            cv::reduce(corners3d, meanMat, 01, CV_REDUCE_AVG);
+                            cv::reduce(corners3d, meanMat, 01, cv::REDUCE_AVG);
 
                             cv::Point3f mean(meanMat.at<float>(0), meanMat.at<float>(1), meanMat.at<float>(2));
 
@@ -110,7 +110,7 @@ void OrientationAgent::produce() {
 
                             cv::SVD::compute(corners3d, w, u, vt);
 
-                            cv::Point3f normal(vt.at<float>(6), vt.t().at<float>(7), vt.t().at<float>(8));
+                            cv::Point3f normal(vt.at<float>(6), vt.at<float>(7), vt.at<float>(8));
 
                             // NORMAL TO QUAT
 

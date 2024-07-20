@@ -15,7 +15,7 @@ YoloAgent::~YoloAgent() {
     if (inferencingThread.joinable())
         inferencingThread.join();
 
-    _exit(0);
+    _Exit(0);
 }
 
 void YoloAgent::startDetecting() {
