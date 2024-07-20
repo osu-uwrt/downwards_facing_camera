@@ -25,7 +25,7 @@ CameraAgent::CameraAgent(MicroROSClient &client) {
         sendSerial(serialPort);
     }
 
-    captureThread = std::thread(&captureImages, this);
+    captureThread = std::thread(&CameraAgent::captureImages, this);
 }
 
 CameraAgent::~CameraAgent() {

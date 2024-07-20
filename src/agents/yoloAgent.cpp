@@ -7,7 +7,7 @@ YoloAgent::YoloAgent(char *tfliteFile, int numClasses, double conf, double iou, 
 
     running = true;
 
-    inferencingThread = std::thread(&inference, this);
+    inferencingThread = std::thread(&YoloAgent::inference, this);
 }
 
 YoloAgent::~YoloAgent() {

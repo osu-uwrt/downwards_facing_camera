@@ -25,7 +25,7 @@ private:
 
     cv::Mat leftStereoMap1, leftStereoMap2, rightStereoMap1, rightStereoMap2, Q;
 
-    cv::Ptr<cv::StereoBM> leftStereo, rightStereo;
+    cv::Ptr<cv::StereoSGBM> leftStereo, rightStereo;
     cv::Ptr<cv::ximgproc::DisparityWLSFilter> wslFilter;
 
     std::thread depthThread;

@@ -44,7 +44,7 @@ StereoAgent::StereoAgent(char *stereoMapsFile, char *configFile, CameraAgent *ca
 
     cameraAgent = camAgent;
 
-    depthThread = std::thread(&getDepths, this);
+    depthThread = std::thread(&StereoAgent::getDepths, this);
 }
 
 StereoAgent::~StereoAgent() {

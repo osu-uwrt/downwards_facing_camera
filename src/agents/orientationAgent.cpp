@@ -150,10 +150,10 @@ void OrientationAgent::produce() {
                             camDet.pose.pose.position.x = mean.x;
                             camDet.pose.pose.position.y = mean.y;
                             camDet.pose.pose.position.z = mean.z;
-                            detection.pose.pose.orientation.w = quat[3];
-                            detection.pose.pose.orientation.x = quat[0];
-                            detection.pose.pose.orientation.y = quat[1];
-                            detection.pose.pose.orientation.z = quat[2];
+                            camDet.pose.pose.orientation.w = quat[3];
+                            camDet.pose.pose.orientation.x = quat[0];
+                            camDet.pose.pose.orientation.y = quat[1];
+                            camDet.pose.pose.orientation.z = quat[2];
 
                             detectionMsg.push_back(detection);
                         }
