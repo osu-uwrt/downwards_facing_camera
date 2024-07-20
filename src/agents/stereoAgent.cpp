@@ -13,13 +13,13 @@ StereoAgent::StereoAgent(char *stereoMapsFile, char *configFile, CameraAgent *ca
     stereoConfig = configFromFile(configFile);
 
     // TODO ENSURE THIS WORKS
-    if (stereoConfig.SGBM) {
+    //if (stereoConfig.SGBM) {
         leftStereo = cv::StereoSGBM::create(
             stereoConfig.minDisparity, stereoConfig.numDisparities, stereoConfig.blockSize, stereoConfig.P1,
             stereoConfig.P2, stereoConfig.disp12MaxDiff, stereoConfig.preFilterCap, stereoConfig.uniquenessRatio,
             stereoConfig.speckleWindowSize, stereoConfig.speckleRange);
-    }
-    else {
+   // }
+   /* else {
         leftStereo = cv::StereoBM::create(stereoConfig.numDisparities, stereoConfig.blockSize);
         leftStereo->setPreFilterType(stereoConfig.preFilterType);
         leftStereo->setPreFilterSize(stereoConfig.preFilterSize);
@@ -34,7 +34,7 @@ StereoAgent::StereoAgent(char *stereoMapsFile, char *configFile, CameraAgent *ca
     leftStereo->setSpeckleRange(stereoConfig.speckleRange);
     leftStereo->setSpeckleWindowSize(stereoConfig.speckleWindowSize);
     leftStereo->setDisp12MaxDiff(stereoConfig.disp12MaxDiff);
-
+    */
     rightStereo = cv::ximgproc::createRightMatcher(leftStereo);
     wslFilter = cv::ximgproc::createDisparityWLSFilter(rightStereo);
     wslFilter->setLambda(stereoConfig.lambda);

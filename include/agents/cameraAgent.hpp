@@ -19,7 +19,7 @@ private:
     lccv::PiCamera cam1, cam2;
     mySerial serialPort = mySerial("/dev/ttyAMA4", 600);
 
-    MicroROSClient client_;
+    MicroROSClient &client_;
 
     std::thread captureThread;
 

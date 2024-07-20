@@ -27,10 +27,8 @@ cv::Mat blueMask(cv::Mat image, cv::Mat mask) {
     return newMask;
 }
 
-OrientationAgent::OrientationAgent(MicroROSClient &client, YoloAgent *yoAgent) {
+OrientationAgent::OrientationAgent(MicroROSClient &client, YoloAgent *yoAgent): client_(client) {
     yoloAgent = yoAgent;
-
-    client_ = client;
 
     running = true;
 
@@ -57,7 +55,7 @@ void OrientationAgent::produce() {
     int targetTask = 0;
     while (running) {
         if (producing) {
-            if (client.getDetectionsEnabled(targetTask)) {
+            if (client_.getDetectionsEnabled(targetTask)) {
                 yoloAgent->setTask(targetTask);
                 YoloDepth inputs;
                 try {
@@ -155,7 +153,7 @@ void OrientationAgent::produce() {
                             camDet.pose.pose.orientation.y = quat[1];
                             camDet.pose.pose.orientation.z = quat[2];
 
-                            detectionMsg.push_back(detection);
+                            detectionMsg.push_back(camDet);
                         }
                     }
                 }

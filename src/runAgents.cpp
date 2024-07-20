@@ -16,10 +16,10 @@ int main(int argc, char *argv[]) {
 
     client.run();
 
-    CameraAgent camAgent(client);
+    CameraAgent camAgent(std::ref(client));
     StereoAgent stereoAgent("/home/pi/StereoMaps.xml", "config", &camAgent);
     YoloAgent yoloAgent("/home/pi/BinZoomCrop_full_integer_quant_edgetpu.tflite", 10, .8, .8, &stereoAgent);
-    OrientationAgent orientationAgent(client, &yoloAgent);
+    OrientationAgent orientationAgent(std::ref(client), &yoloAgent);
 
     camAgent.startCapturing();
     stereoAgent.startStereo();

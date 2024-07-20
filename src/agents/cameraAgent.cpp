@@ -1,4 +1,5 @@
 #include <agents/cameraAgent.hpp>
+#include <unistd.h>
 
 void createCamera(lccv::PiCamera &camera_, int id) {
     camera_.options->camera = id;
@@ -11,10 +12,7 @@ void sendSerial(mySerial serial) {
     serial.Send('\x00');
 }
 
-CameraAgent::CameraAgent(MicroROSClient &client) {
-
-    client_ = client;
-
+CameraAgent::CameraAgent(MicroROSClient &client): client_(client) {
     createCamera(cam1, 0);
     createCamera(cam2, 0);
 

@@ -22,7 +22,7 @@ private:
     // TODO: SET THESE
     cv::Mat lCamMat, lCamDist;
 
-    MicroROSClient client_;
+    MicroROSClient &client_;
     YoloAgent *yoloAgent;
 
     std::thread producingThread;
