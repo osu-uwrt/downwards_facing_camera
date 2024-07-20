@@ -1,3 +1,6 @@
+#ifndef STEREOAGENT
+#define STEREOAGENT
+
 #include <thread>
 
 
@@ -25,7 +28,8 @@ private:
 
     cv::Mat leftStereoMap1, leftStereoMap2, rightStereoMap1, rightStereoMap2, Q;
 
-    cv::Ptr<cv::StereoSGBM> leftStereo, rightStereo;
+    cv::Ptr<cv::StereoSGBM> leftStereo;
+    cv::Ptr<cv::StereoMatcher> rightStereo;
     cv::Ptr<cv::ximgproc::DisparityWLSFilter> wslFilter;
 
     std::thread depthThread;
@@ -36,3 +40,5 @@ private:
 
     void getDepths();
 };
+
+#endif

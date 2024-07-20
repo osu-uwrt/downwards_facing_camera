@@ -3,6 +3,9 @@
 #include "agents/stereoAgent.hpp"
 #include "agents/yoloAgent.hpp"
 
+#include <unistd.h>
+#include <net/if.h>
+
 int main(int argc, char *argv[]) {
 
     int ifIdx = if_nametoindex("talos");
@@ -10,7 +13,7 @@ int main(int argc, char *argv[]) {
         throw std::system_error(errno, std::generic_category(), "if_nametoindex");
     }
 
-    MicroROSClient client = MicroROSClient::create(ifIdx, CANMORE_CLIENT_ID_DOWNWARDS_CAMERA, "talos");
+    MicroROSClient &client = MicroROSClient::create(ifIdx, CANMORE_CLIENT_ID_DOWNWARDS_CAMERA, "talos");
 
     client.waitForAgent();
 

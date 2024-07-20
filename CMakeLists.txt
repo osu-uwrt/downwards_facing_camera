@@ -21,6 +21,7 @@ add_executable(takeSterImage tools/takeStereoIm.cpp tools/mySerial.cpp)
 add_executable(runAgents src/runAgents.cpp tools/mySerial.cpp)
 
 add_library(agentLib src/agents/cameraAgent.cpp src/agents/orientationAgent.cpp src/agents/stereoAgent.cpp src/agents/yoloAgent.cpp tools/mySerial.cpp tools/DFCMicroROSClient.cpp)
+target_link_directories(agentLib PUBLIC libcoral_bindings/out/)
 target_link_libraries(agentLib -llccv ${OpenCV_LIBS} -lcoral_yolo canmore_cpp)
 
 add_custom_target(calibration DEPENDS arucoCal arucoSterCal)

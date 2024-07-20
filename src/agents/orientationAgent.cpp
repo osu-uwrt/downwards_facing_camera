@@ -75,8 +75,10 @@ void OrientationAgent::produce() {
 
                 for (Detection detection : detections) {
                     std::vector<cv::Point2i> corners;
-                    cv::goodFeaturesToTrack(left(cv::Rect(detection.bbox[0] * 320 - detection.bbox[2] / 2 * 320,
-                                                          detection.bbox[1] * 320 - detection[3] / 2 * 320)),
+                    cv::goodFeaturesToTrack(left(cv::Rect((int) (detection.bbox[0] * 320 - detection.bbox[2] / 160),
+                                                          (int) (detection.bbox[1] * 320 - detection.bbox[3] / 160),
+							  (int) detection.bbox[2] * 320,
+							  (int) detection.bbox[3] * 320)),
                                             corners, 0, 0.02, 40);
 
                     if (corners.size() >= 5) {
@@ -89,11 +91,11 @@ void OrientationAgent::produce() {
                         cv::Mat red = redMask(left, mask);
 
                         for (int i = 0; i < corners.size(); i++) {
-                            corners.at(i) += cv::Point2i(detection.bbox[0] * 320, detection.bbox[1] * 320);
+                            corners.at(i) += cv::Point2i(detection.bbox[0] * 320 - detection.bbox[1] / 160, detection.bbox[1] * 320 - detection.bbox[2] / 160);
                         }
 
                         for (int i = 0; i < corners.size(); i++) {
-                            if (mask.at(corners[i] * 4) == 1) {
+                            if (mask.at<int>(corners[i].y, corners[i].x) == 1) {
                                 float depth = depthMap.at<float>(corners.at(i).y, corners.at(i).x);
 
                                 corners3d.push_back(cv::Point3f(undistorted[i].x, undistorted[i].y, 1.) * depth);

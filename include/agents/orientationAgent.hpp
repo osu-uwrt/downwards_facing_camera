@@ -1,3 +1,5 @@
+#ifndef ORIENTAGENT
+#define ORIENTAGENT
 
 #include "agents/yoloAgent.hpp"
 #include "tools/DFCMicroROSClient.hpp"
@@ -29,3 +31,5 @@ private:
 
     void produce();
 };
+
+#endif

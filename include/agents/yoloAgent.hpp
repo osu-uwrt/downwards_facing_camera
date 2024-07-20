@@ -1,3 +1,6 @@
+#ifndef YOLOAGENT
+#define YOLOAGENT
+
 #include <thread>
 
 #include "agents/stereoAgent.hpp"
@@ -26,3 +29,5 @@ private:
 
     void inference();
 };
+
+#endif

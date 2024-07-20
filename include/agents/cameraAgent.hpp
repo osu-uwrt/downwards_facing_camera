@@ -1,3 +1,6 @@
+#ifndef CAMERAAGENT
+#define CAMERAAGENT
+
 #include "lccv.hpp"
 #include <tools/mySerial.h>
 #include <tools/DataUtils.hpp>
@@ -30,3 +33,5 @@ private:
 
     void manageRequests();
 };
+
+#endif
