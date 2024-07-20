@@ -11,7 +11,10 @@ void sendSerial(mySerial serial) {
     serial.Send('\x00');
 }
 
-CameraAgent::CameraAgent() {
+CameraAgent::CameraAgent(MicroROSClient &client) {
+
+    client_ = client;
+
     createCamera(cam1, 0);
     createCamera(cam2, 0);
 
@@ -47,6 +50,7 @@ void CameraAgent::captureImages() {
     while (running) {
         if (capturing && imageQueue.size() < 1) {
             sendSerial(serialPort);
+            timespec ts = client_.getAgentTime();
             cv::Mat images[2];
             if (!cam1.getVideoFrame(images[0], 1000) || !cam2.getVideoFrame(images[1], 1000)) {
                 printf("Failed to grab frame\n");
@@ -54,7 +58,10 @@ void CameraAgent::captureImages() {
             }
             YoloDepth imageHandle;
             imageHandle.setImages(images[0], images[1]);
+            imageHandle.setTimestamp(ts);
             imageQueue.push(imageHandle);
+        } else {
+            usleep(100);
         }
     }
 }

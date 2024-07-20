@@ -23,28 +23,28 @@ public:
         detections_ = detOutput;
         detectionsSet = true;
     }
+
+    void setTimestamp(timespec ts) { timestamp = ts; }
+
     void getImages(cv::Mat &left, cv::Mat &right) {
         left = leftIm;
         right = rightIm;
     }
 
-    void getDepthMap(cv::Mat &depthMap) {
-        depthMap = depth;
-    }
+    void getDepthMap(cv::Mat &depthMap) { depthMap = depth; }
 
-    void getDetections(std::vector<Detection> &detections) {
-        detections = detections_;
-    }
+    void getDetections(std::vector<Detection> &detections) { detections = detections_; }
+
+    timespec getTimeStamp() { return timestamp; }
 
 private:
     bool depthSet, detectionsSet;
     cv::Mat leftIm, rightIm, depth;
     std::vector<Detection> detections_;
+    timespec timestamp;
 };
 
-template <typename T>
-class TSQueue
-{
+template <typename T> class TSQueue {
 private:
     // Underlying queue
     std::shared_ptr<std::queue<T>> m_queue;
@@ -68,9 +68,7 @@ public:
     size_t size();
 };
 
-template <typename T>
-TSQueue<T>::TSQueue()
-{
+template <typename T> TSQueue<T>::TSQueue() {
     m_queue = std::make_shared<std::queue<T>>();
 }
 
@@ -85,9 +83,7 @@ template <typename T> TSQueue<T> &TSQueue<T>::operator=(TSQueue<T> &rhs) {
 }
 
 // Pushes an element to the queue
-template <typename T>
-void TSQueue<T>::push(T item)
-{
+template <typename T> void TSQueue<T>::push(T item) {
     // Acquire lock
     std::scoped_lock<std::mutex> lock(m_mutex);
 
@@ -98,18 +94,13 @@ void TSQueue<T>::push(T item)
 }
 
 // Pops an element off the queue
-template <typename T>
-T TSQueue<T>::pop()
-{
+template <typename T> T TSQueue<T>::pop() {
     // acquire lock
     std::unique_lock<std::mutex> lock(m_mutex);
 
     // retrieve item
-    if (m_queue->empty())
-    {
-        if (!m_cond.wait_for(lock, std::chrono::seconds(1), [this]()
-                             { return !m_queue->empty(); }))
-        {
+    if (m_queue->empty()) {
+        if (!m_cond.wait_for(lock, std::chrono::seconds(1), [this]() { return !m_queue->empty(); })) {
             throw std::runtime_error("Queue is empty");
         }
     }
@@ -121,9 +112,7 @@ T TSQueue<T>::pop()
     return item;
 }
 
-template <typename T>
-size_t TSQueue<T>::size()
-{
+template <typename T> size_t TSQueue<T>::size() {
     return m_queue->size();
 }
 

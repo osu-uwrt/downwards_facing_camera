@@ -27,17 +27,10 @@ cv::Mat blueMask(cv::Mat image, cv::Mat mask) {
     return newMask;
 }
 
-OrientationAgent::OrientationAgent(char *id, YoloAgent *yoAgent) {
+OrientationAgent::OrientationAgent(MicroROSClient &client, YoloAgent *yoAgent) {
     yoloAgent = yoAgent;
 
-    int ifIdx = if_nametoindex(id);
-    if (!ifIdx) {
-        throw std::system_error(errno, std::generic_category(), "if_nametoindex");
-    }
-
-    client = MicroROSClient::create(ifIdx, CANMORE_CLIENT_ID_DOWNWARDS_CAMERA, "talos");
-
-    client.waitForAgent();
+    client_ = client;
 
     running = true;
 
@@ -75,7 +68,7 @@ void OrientationAgent::produce() {
                 std::vector<Detection> detections;
                 inputs.getDetections(detections);
 
-                std::vector<CameraDetection> detectionMsg(detections.size());
+                std::vector<CameraDetection> detectionMsg;
 
                 cv::Mat left, right;
                 inputs.getImages(left, right);
@@ -84,23 +77,28 @@ void OrientationAgent::produce() {
 
                 for (Detection detection : detections) {
                     std::vector<cv::Point2i> corners;
-                    cv::goodFeaturesToTrack(
-                        left(cv::Rect(detection.bbox[0] - detection.bbox[2] / 2, detection.bbox[1] - detection[3] / 2)),
-                        corners, 0, 0.02, -1);
+                    cv::goodFeaturesToTrack(left(cv::Rect(detection.bbox[0] * 320 - detection.bbox[2] / 2 * 320,
+                                                          detection.bbox[1] * 320 - detection[3] / 2 * 320)),
+                                            corners, 0, 0.02, 40);
 
                     if (corners.size() >= 5) {
                         std::vector<cv::Point3f> corners3d(corners.size());
 
-                        std::vector<cv::Point2i> undistorted(corners.size());
+                        std::vector<cv::Point2f> undistorted(corners.size());
 
                         cv::undistortPoints(corners, undistorted, lCamMat, lCamDist);
                         cv::Mat mask(80, 80, CV_8U, detection.mask);
+                        cv::Mat red = redMask(left, mask);
 
                         for (int i = 0; i < corners.size(); i++) {
-                            if (mask.at(corners[i] / 4) == 1) {
+                            corners.at(i) += cv::Point2i(detection.bbox[0] * 320, detection.bbox[1] * 320);
+                        }
+
+                        for (int i = 0; i < corners.size(); i++) {
+                            if (mask.at(corners[i] * 4) == 1) {
                                 float depth = depthMap.at<float>(corners.at(i));
 
-                                corners3d.push_back(cv::Point3f(undistorted[i].x, undistorted[i].y, depth));
+                                corners3d.push_back(cv::Point3f(undistorted[i].x, undistorted[i].y, 1.) * depth);
                             }
                         }
 
@@ -118,15 +116,51 @@ void OrientationAgent::produce() {
 
                             // NORMAL TO QUAT
 
+                            if (normal.z > 0) {
+                                normal = -normal;
+                            }
+
+                            normal /= cv::norm(normal);
+
+                            auto axis = normal.cross(cv::Point3f(0, 0, 1));
+                            double axisLen = cv::norm(axis);
+
+                            double quat[4];
+                            double angle;
+
+                            if (axisLen == 0) {
+                                axis = cv::Point3f(1, 0, 0);
+                                angle = M_PI;
+                            }
+                            else {
+                                axis /= axisLen;
+                                angle = std::acos(normal.dot(cv::Point3f(0, 0, 1)));
+                            }
+
+                            quat[0] = axis.x * std::sin(angle / 2);
+                            quat[1] = axis.y * std::sin(angle / 2);
+                            quat[2] = axis.z * std::sin(angle / 2);
+                            quat[3] = std::cos(angle / 2);
+
                             CameraDetection camDet;
 
                             camDet.score = detection.conf;
                             camDet.classId = detection.classId;
+
+                            camDet.pose.pose.position.x = mean.x;
+                            camDet.pose.pose.position.y = mean.y;
+                            camDet.pose.pose.position.z = mean.z;
+                            detection.pose.pose.orientation.w = quat[3];
+                            detection.pose.pose.orientation.x = quat[0];
+                            detection.pose.pose.orientation.y = quat[1];
+                            detection.pose.pose.orientation.z = quat[2];
+
+                            detectionMsg.push_back(detection);
                         }
                     }
                 }
 
-                // Do the orientation things with inputs
+                client_.reportDetections(inputs.getTimeStamp(), detectionMsg);
             }
         }
     }

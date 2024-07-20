@@ -2,11 +2,13 @@
 #include <tools/mySerial.h>
 #include <tools/DataUtils.hpp>
 
+#include "tools/DFCMicroROSClient.hpp"
+
 class CameraAgent {
 public:
     TSQueue<YoloDepth> imageQueue;
 
-    CameraAgent();
+    CameraAgent(MicroROSClient &client);
     ~CameraAgent();
 
     void startCapturing();
@@ -16,6 +18,8 @@ public:
 private:
     lccv::PiCamera cam1, cam2;
     mySerial serialPort = mySerial("/dev/ttyAMA4", 600);
+
+    MicroROSClient client_;
 
     std::thread captureThread;
 
