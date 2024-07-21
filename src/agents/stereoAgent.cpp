@@ -51,22 +51,22 @@ config StereoAgent::configFromFile(char *configFile) {
 
     ryml::Parser parser;
     ryml::Tree yamlTree = parser.parse_in_arena(configFile);
-    configuration.P1 = std::stoi(std::string(yamlTree["P1"].val()));
-    configuration.P2 = std::stoi(std::string(yamlTree["P2"].val()));
-    configuration.blockSize = std::stoi(std::string(yamlTree["blockSize"].val()));
-    configuration.baseline = std::stoi(std::string(yamlTree["baseline"].val()));
-    configuration.disp12MaxDiff = std::stoi(std::string(yamlTree["disp12MaxDiff"].val()));
-    configuration.lambda = std::stoi(std::string(yamlTree["lambda"].val()));
-    configuration.minDisparity = std::stoi(std::string(yamlTree["minDisparity"].val()));
-    configuration.numDisparities = std::stoi(std::string(yamlTree["numDisparities"].val()));
-    configuration.preFilterCap = std::stoi(std::string(yamlTree["preFilterCap"].val()));
-    configuration.preFilterSize = std::stoi(std::string(yamlTree["preFilterSize"].val()));
-    configuration.sigma = std::stoi(std::string(yamlTree["sigma"].val()));
-    configuration.speckleRange = std::stoi(std::string(yamlTree["speckleRange"].val()));
-    configuration.speckleWindowSize = std::stoi(std::string(yamlTree["speckleWindowSize"].val()));
-    configuration.textureThreshold = std::stoi(std::string(yamlTree["textureThreshold"].val()));
-    configuration.uniquenessRatio = std::stoi(std::string(yamlTree["uniquenessRatio"].val()));
-    configuration.focalLen = std::stof(std::string(yamlTree["focalLen"].val()));
+    configuration.P1 = std::stoi(std::string(yamlTree["P1"].val().data));
+    configuration.P2 = std::stoi(std::string(yamlTree["P2"].val().data));
+    configuration.blockSize = std::stoi(std::string(yamlTree["blockSize"].val().data));
+    configuration.baseline = std::stoi(std::string(yamlTree["baseline"].val().data));
+    configuration.disp12MaxDiff = std::stoi(std::string(yamlTree["disp12MaxDiff"].val().data));
+    configuration.lambda = std::stoi(std::string(yamlTree["lambda"].val().data));
+    configuration.minDisparity = std::stoi(std::string(yamlTree["minDisparity"].val().data));
+    configuration.numDisparities = std::stoi(std::string(yamlTree["numDisparities"].val().data));
+    configuration.preFilterCap = std::stoi(std::string(yamlTree["preFilterCap"].val().data));
+    configuration.preFilterSize = std::stoi(std::string(yamlTree["preFilterSize"].val().data));
+    configuration.sigma = std::stoi(std::string(yamlTree["sigma"].val().data));
+    configuration.speckleRange = std::stoi(std::string(yamlTree["speckleRange"].val().data));
+    configuration.speckleWindowSize = std::stoi(std::string(yamlTree["speckleWindowSize"].val().data));
+    configuration.textureThreshold = std::stoi(std::string(yamlTree["textureThreshold"].val().data));
+    configuration.uniquenessRatio = std::stoi(std::string(yamlTree["uniquenessRatio"].val().data));
+    configuration.focalLen = std::stof(std::string(yamlTree["focalLen"].val().data));
 
     return configuration;
 }
