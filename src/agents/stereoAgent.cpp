@@ -1,6 +1,8 @@
 #include <agents/stereoAgent.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include <fstream>
+
 #define RYML_SINGLE_HDR_DEFINE_NOW
 #include "ryml_all.hpp"
 
@@ -49,8 +51,13 @@ void StereoAgent::stopStereo() {
 config StereoAgent::configFromFile(char *configFile) {
     config configuration;
 
-    ryml::Parser parser;
-    ryml::Tree yamlTree = parser.parse_in_arena(configFile);
+    std::ifstream file(configFile);
+
+    std::string content(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+
+    ryml::Tree yamlTree;
+    ryml::parse_in_place(content, &yamlTree);
+    
     configuration.P1 = std::stoi(std::string(yamlTree["P1"].val().data()));
     configuration.P2 = std::stoi(std::string(yamlTree["P2"].val().data()));
     configuration.blockSize = std::stoi(std::string(yamlTree["blockSize"].val().data()));
