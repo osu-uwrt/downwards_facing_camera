@@ -160,6 +160,10 @@ class CoralYolo : public CoralYoloItf {
         return detections;
     }
 
+    void setTask(int task) {
+        task_ = task;
+    }
+
    private:
     std::unique_ptr<tflite::FlatBufferModel> model;
     std::unique_ptr<tflite::Interpreter> interpreter;

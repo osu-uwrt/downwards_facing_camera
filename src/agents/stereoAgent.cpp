@@ -1,6 +1,9 @@
 #include <agents/stereoAgent.hpp>
 #include <opencv2/imgproc.hpp>
 
+#define RYML_SINGLE_HDR_DEFINE_NOW
+#include "ryml_all.hpp"
+
 StereoAgent::StereoAgent(char *stereoMapsFile, char *configFile, CameraAgent *camAgent) {
     cv::FileStorage mapsFile("/home/pi/StereoMaps.xml", cv::FileStorage::READ);
     mapsFile["Left_Stereo_Map_x"] >> leftStereoMap1;
@@ -12,29 +15,11 @@ StereoAgent::StereoAgent(char *stereoMapsFile, char *configFile, CameraAgent *ca
 
     stereoConfig = configFromFile(configFile);
 
-    // TODO ENSURE THIS WORKS
-    //if (stereoConfig.SGBM) {
-        leftStereo = cv::StereoSGBM::create(
-            stereoConfig.minDisparity, stereoConfig.numDisparities, stereoConfig.blockSize, stereoConfig.P1,
-            stereoConfig.P2, stereoConfig.disp12MaxDiff, stereoConfig.preFilterCap, stereoConfig.uniquenessRatio,
-            stereoConfig.speckleWindowSize, stereoConfig.speckleRange);
-   // }
-   /* else {
-        leftStereo = cv::StereoBM::create(stereoConfig.numDisparities, stereoConfig.blockSize);
-        leftStereo->setPreFilterType(stereoConfig.preFilterType);
-        leftStereo->setPreFilterSize(stereoConfig.preFilterSize);
-        leftStereo->setPreFilterCap(stereoConfig.preFilterCap);
-        leftStereo->setTextureThreshold(stereoConfig.textureThreshold);
-    }
+    leftStereo =
+        cv::StereoSGBM::create(stereoConfig.minDisparity, stereoConfig.numDisparities, stereoConfig.blockSize,
+                               stereoConfig.P1, stereoConfig.P2, stereoConfig.disp12MaxDiff, stereoConfig.preFilterCap,
+                               stereoConfig.uniquenessRatio, stereoConfig.speckleWindowSize, stereoConfig.speckleRange);
 
-    leftStereo->setMinDisparity(stereoConfig.minDisparity);
-    leftStereo->setNumDisparities(stereoConfig.numDisparities);
-    leftStereo->setBlockSize(stereoConfig.blockSize);
-    leftStereo->setUniquenessRatio(stereoConfig.uniquenessRatio);
-    leftStereo->setSpeckleRange(stereoConfig.speckleRange);
-    leftStereo->setSpeckleWindowSize(stereoConfig.speckleWindowSize);
-    leftStereo->setDisp12MaxDiff(stereoConfig.disp12MaxDiff);
-    */
     rightStereo = cv::ximgproc::createRightMatcher(leftStereo);
     wslFilter = cv::ximgproc::createDisparityWLSFilter(rightStereo);
     wslFilter->setLambda(stereoConfig.lambda);
@@ -59,6 +44,31 @@ void StereoAgent::startStereo() {
 
 void StereoAgent::stopStereo() {
     gettingDepths = false;
+}
+
+config StereoAgent::configFromFile(char *configFile) {
+    config configuration;
+
+    ryml::Parser parser;
+    ryml::Tree yamlTree = parser.parse_in_arena(configFile);
+    configuration.P1 = std::stoi(yamlTree["P1"].val());
+    configuration.P2 = std::stoi(yamlTree["P2"].val());
+    configuration.blockSize = std::stoi(yamlTree["blockSize"].val());
+    configuration.baseline = std::stoi(yamlTree["baseline"].val());
+    configuration.disp12MaxDiff = std::stoi(yamlTree["disp12MaxDiff"].val());
+    configuration.lambda = std::stoi(yamlTree["lambda"].val());
+    configuration.minDisparity = std::stoi(yamlTree["minDisparity"].val());
+    configuration.numDisparities = std::stoi(yamlTree["numDisparities"].val());
+    configuration.preFilterCap = std::stoi(yamlTree["preFilterCap"].val());
+    configuration.preFilterSize = std::stoi(yamlTree["preFilterSize"].val());
+    configuration.sigma = std::stoi(yamlTree["sigma"].val());
+    configuration.speckleRange = std::stoi(yamlTree["speckleRange"].val());
+    configuration.speckleWindowSize = std::stoi(yamlTree["speckleWindowSize"].val());
+    configuration.textureThreshold = std::stoi(yamlTree["textureThreshold"].val());
+    configuration.uniquenessRatio = std::stoi(yamlTree["uniquenessRatio"].val());
+    configuration.focalLen = std::stof(yamlTree["focalLen"].val());
+
+    return configuration;
 }
 
 void StereoAgent::getDepths() {
