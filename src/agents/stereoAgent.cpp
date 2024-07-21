@@ -53,11 +53,11 @@ config StereoAgent::configFromFile(char *configFile) {
 
     std::ifstream file(configFile);
 
-    std::string content(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+    std::string content((std::istreambuf_iterator<char>(file)), (std::istreambuf_iterator<char>()));
 
     ryml::Tree yamlTree;
-    ryml::parse_in_place(content, &yamlTree);
-    
+    ryml::parse_in_place(ryml::to_substr(content), &yamlTree);
+
     configuration.P1 = std::stoi(std::string(yamlTree["P1"].val().data()));
     configuration.P2 = std::stoi(std::string(yamlTree["P2"].val().data()));
     configuration.blockSize = std::stoi(std::string(yamlTree["blockSize"].val().data()));
