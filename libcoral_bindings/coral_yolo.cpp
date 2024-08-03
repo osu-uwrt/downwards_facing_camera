@@ -145,13 +145,13 @@ class CoralYolo : public CoralYoloItf {
                     maxConf = result;
                 }
             }
-            bool partOfTask = false;
+            bool partOfTask = true;
             task_ = 0;
-            if (task_ == 1) {
-                partOfTask = std::find(std::begin(table), std::end(table), detection.classId) != std::end(table);
-            } else {
-                partOfTask = std::find(std::begin(bins), std::end(bins), detection.classId) != std::end(bins);
-            }
+            // if (task_ == 1) {
+            //     partOfTask = std::find(std::begin(table), std::end(table), detection.classId) != std::end(table);
+            // } else {
+            //     partOfTask = std::find(std::begin(bins), std::end(bins), detection.classId) != std::end(bins);
+            // }
             if (partOfTask && maxConf >= min_conf_) {
                 detection.conf = postProcessValue(maxConf, true);
                 nmsWithMask(detections, detection, iou_thresh_, i);
@@ -230,10 +230,6 @@ class CoralYolo : public CoralYoloItf {
             processMask(newDetection, loc);
             detections.emplace_back(newDetection);
         }
-    }
-
-    void setTask(int task) {
-        task_ = task;
     }
 };
 

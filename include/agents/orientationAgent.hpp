@@ -22,7 +22,7 @@ private:
     int ifIdx;
 
     // TODO: SET THESE
-    cv::Mat lCamMat, lCamDist;
+    cv::Mat lCamMat, lCamDist, rCamMat, rCamDist;
 
     MicroROSClient &client_;
     YoloAgent *yoloAgent;

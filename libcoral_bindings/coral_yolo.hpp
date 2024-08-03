@@ -18,7 +18,7 @@ class CoralYoloItf {
 
     virtual std::vector<Detection> processDetections() = 0;
 
-    virtual void setTask(int task);
+    virtual void setTask(int task) = 0;
 };
 
 std::shared_ptr<CoralYoloItf> createCoralYolo(std::string model_path,

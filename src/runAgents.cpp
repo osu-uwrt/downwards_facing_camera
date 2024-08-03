@@ -1,6 +1,5 @@
 #include "agents/cameraAgent.hpp"
 #include "agents/orientationAgent.hpp"
-#include "agents/stereoAgent.hpp"
 #include "agents/yoloAgent.hpp"
 
 #include <unistd.h>
@@ -20,8 +19,7 @@ int main(int argc, char *argv[]) {
     client.run();
 
     CameraAgent camAgent(std::ref(client));
-    StereoAgent stereoAgent("/home/pi/StereoMaps.xml", "config", &camAgent);
-    YoloAgent yoloAgent("/home/pi/BinZoomCrop_full_integer_quant_edgetpu.tflite", 10, .8, .8, &stereoAgent);
+    YoloAgent yoloAgent("/home/pi/BinZoomCrop_full_integer_quant_edgetpu.tflite", 10, .8, .8, &camAgent);
     OrientationAgent orientationAgent(std::ref(client), &yoloAgent);
 
     camAgent.startCapturing();

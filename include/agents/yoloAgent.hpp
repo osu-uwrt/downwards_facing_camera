@@ -12,7 +12,7 @@ class YoloAgent {
 public:
     TSQueue<YoloDepth> yoloOutput;
 
-    YoloAgent(char *tfliteFile, int numClasses, double conf, double iou, StereoAgent *stAgent);
+    YoloAgent(char *tfliteFile, int numClasses, double conf, double iou, CameraAgent *camAgent);
     ~YoloAgent();
 
     void startDetecting();
@@ -25,7 +25,7 @@ private:
     std::shared_ptr<CoralYoloItf> model;
     std::thread inferencingThread;
 
-    StereoAgent *stereoAgent;
+    CameraAgent *cameraAgent;
 
     void inference();
 };
