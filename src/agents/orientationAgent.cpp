@@ -27,8 +27,7 @@ cv::Mat blueMask(cv::Mat image, cv::Mat mask) {
     return newMask;
 }
 
-OrientationAgent::OrientationAgent(YoloAgent *yoAgent) {
-    yoloAgent = yoAgent;
+OrientationAgent::OrientationAgent(MicroROSClient &client, YoloAgent *yoAgent): client_(client), yoloAgent(yoAgent) {
 
     cv::FileStorage cam0Intr("/home/pi/Cam0Intr.xml", cv::FileStorage::READ);
     cam0Intr["Matrix"] >> lCamMat;
@@ -133,7 +132,7 @@ void OrientationAgent::produce() {
                     detectionMsg.push_back(camDet);
                 }
 
-                // client_.reportDetections(inputs.getTimeStamp(), detectionMsg);
+                client_.reportDetections(inputs.getTimeStamp(), detectionMsg);
             // }
         }
     }

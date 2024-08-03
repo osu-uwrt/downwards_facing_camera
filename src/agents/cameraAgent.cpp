@@ -12,7 +12,7 @@ void sendSerial(mySerial serial) {
     serial.Send('\x00');
 }
 
-CameraAgent::CameraAgent(): running(true), capturing(false) {
+CameraAgent::CameraAgent(MicroROSClient &client): running(true), capturing(false), client_(client) {
     createCamera(cam1, 0);
     createCamera(cam2, 1);
 
