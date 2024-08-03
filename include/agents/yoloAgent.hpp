@@ -3,7 +3,7 @@
 
 #include <thread>
 
-#include "agents/stereoAgent.hpp"
+#include "agents/cameraAgent.hpp"
 #include "tools/DataUtils.hpp"
 
 #include "coral_yolo.hpp"

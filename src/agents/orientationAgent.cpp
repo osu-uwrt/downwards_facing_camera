@@ -27,8 +27,18 @@ cv::Mat blueMask(cv::Mat image, cv::Mat mask) {
     return newMask;
 }
 
-OrientationAgent::OrientationAgent(MicroROSClient &client, YoloAgent *yoAgent): client_(client) {
+OrientationAgent::OrientationAgent(YoloAgent *yoAgent) {
     yoloAgent = yoAgent;
+
+    cv::FileStorage cam0Intr("/home/pi/Cam0Intr.xml", cv::FileStorage::READ);
+    cam0Intr["Matrix"] >> lCamMat;
+    cam0Intr["DistCoeffs"] >> lCamDist;
+    cam0Intr.release();
+
+    cv::FileStorage cam1Intr("/home/pi/Cam1Intr.xml", cv::FileStorage::READ);
+    cam1Intr["Matrix"] >> rCamMat;
+    cam1Intr["DistCoeffs"] >> rCamDist;
+    cam1Intr.release();
 
     running = true;
 
@@ -55,8 +65,8 @@ void OrientationAgent::produce() {
     int targetTask = 0;
     while (running) {
         if (producing) {
-            if (client_.getDetectionsEnabled(targetTask)) {
-                yoloAgent->setTask(targetTask);
+            // if (client_.getDetectionsEnabled(targetTask)) {
+                // yoloAgent->setTask(targetTask);
                 YoloDepth inputs;
                 try {
                     inputs = yoloAgent->yoloOutput.pop();
@@ -67,21 +77,24 @@ void OrientationAgent::produce() {
                 inputs.getLeftDetections(lDetections);
                 inputs.getRightDetections(rDetections);
 
+                printf("Total detections: %d\n", lDetections.size(), rDetections.size());
+
                 std::vector<CameraDetection> detectionMsg;
 
                 cv::Mat left, right;
                 inputs.getImages(left, right);
 
                 for (Detection detection : lDetections) {
-                    std::vector<cv::Point2i> corners;
+                    std::vector<cv::Point2f> corners;
 
-                    corners.push_back(centroid(detection.bbox[0] * 320 - detection.bbox[2] / 160,
+                    corners.push_back(cv::Point2f(detection.bbox[0] * 320 - detection.bbox[2] / 160,
                                                detection.bbox[1] * 320 - detection.bbox[3] / 160));
 
                     std::vector<cv::Point2f> undistorted(corners.size());
 
                     cv::undistortPoints(corners, undistorted, lCamMat, lCamDist);
                     cv::Mat mask(80, 80, CV_8U, detection.mask);
+                    printf("Id: %d\n", detection.classId);
                     cv::Mat red = redMask(left, mask);
 
                     CameraDetection camDet;
@@ -97,9 +110,9 @@ void OrientationAgent::produce() {
                 }
 
                 for (Detection detection : rDetections) {
-                    std::vector<cv::Point2i> corners;
+                    std::vector<cv::Point2f> corners;
 
-                    corners.push_back(centroid(detection.bbox[0] * 320 - detection.bbox[2] / 160,
+                    corners.push_back(cv::Point2f(detection.bbox[0] * 320 - detection.bbox[2] / 160,
                                                detection.bbox[1] * 320 - detection.bbox[3] / 160));
 
                     std::vector<cv::Point2f> undistorted(corners.size());
@@ -120,8 +133,8 @@ void OrientationAgent::produce() {
                     detectionMsg.push_back(camDet);
                 }
 
-                client_.reportDetections(inputs.getTimeStamp(), detectionMsg);
-            }
+                // client_.reportDetections(inputs.getTimeStamp(), detectionMsg);
+            // }
         }
     }
 }

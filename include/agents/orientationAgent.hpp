@@ -9,7 +9,7 @@
 
 class OrientationAgent {
 public:
-    OrientationAgent(MicroROSClient &client, YoloAgent *yoAgent);
+    OrientationAgent(YoloAgent *yoAgent);
 
     ~OrientationAgent();
 
@@ -24,7 +24,7 @@ private:
     // TODO: SET THESE
     cv::Mat lCamMat, lCamDist, rCamMat, rCamDist;
 
-    MicroROSClient &client_;
+    // MicroROSClient &client_;
     YoloAgent *yoloAgent;
 
     std::thread producingThread;

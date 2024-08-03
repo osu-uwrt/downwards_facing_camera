@@ -7,23 +7,22 @@
 
 int main(int argc, char *argv[]) {
 
-    int ifIdx = if_nametoindex("talos");
-    if (!ifIdx) {
-        throw std::system_error(errno, std::generic_category(), "if_nametoindex");
-    }
+    // int ifIdx = if_nametoindex("talos");
+    // if (!ifIdx) {
+    //     throw std::system_error(errno, std::generic_category(), "if_nametoindex");
+    // }
 
-    MicroROSClient &client = MicroROSClient::create(ifIdx, CANMORE_CLIENT_ID_DOWNWARDS_CAMERA, "talos");
+    // MicroROSClient &client = MicroROSClient::create(ifIdx, CANMORE_CLIENT_ID_DOWNWARDS_CAMERA, "talos");
 
-    client.waitForAgent();
+    // client.waitForAgent();
 
-    client.run();
+    // client.run();
 
-    CameraAgent camAgent(std::ref(client));
-    YoloAgent yoloAgent("/home/pi/BinZoomCrop_full_integer_quant_edgetpu.tflite", 10, .8, .8, &camAgent);
-    OrientationAgent orientationAgent(std::ref(client), &yoloAgent);
+    CameraAgent camAgent;
+    YoloAgent yoloAgent("/home/pi/robosub_2024_1_full_integer_quant_edgetpu.tflite", 10, .8, .8, &camAgent);
+    OrientationAgent orientationAgent(&yoloAgent);
 
     camAgent.startCapturing();
-    stereoAgent.startStereo();
     yoloAgent.startDetecting();
     orientationAgent.startProducing();
 

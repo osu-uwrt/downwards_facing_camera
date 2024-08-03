@@ -9,6 +9,8 @@
 #include <mutex>
 #include <queue>
 
+#include <condition_variable>
+
 class YoloDepth {
 public:
     void setImages(cv::Mat &left, cv::Mat &right) {

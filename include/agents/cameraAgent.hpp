@@ -11,7 +11,7 @@ class CameraAgent {
 public:
     TSQueue<YoloDepth> imageQueue;
 
-    CameraAgent(MicroROSClient &client);
+    CameraAgent();
     ~CameraAgent();
 
     void startCapturing();
@@ -22,7 +22,7 @@ private:
     lccv::PiCamera cam1, cam2;
     mySerial serialPort = mySerial("/dev/ttyAMA4", 600);
 
-    MicroROSClient &client_;
+    // MicroROSClient &client_;
 
     std::thread captureThread;
 
@@ -30,8 +30,6 @@ private:
     bool capturing;
 
     void captureImages();
-
-    void manageRequests();
 };
 
 #endif

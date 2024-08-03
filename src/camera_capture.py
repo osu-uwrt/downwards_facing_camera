@@ -3,6 +3,7 @@ import re
 import time
 import cv2
 from picamera2 import Picamera2
+import serial
 
 def create_camera(camera_id):
     picam2 = Picamera2(camera_id)
@@ -23,12 +24,19 @@ def get_starting_counter(directory, pattern_str):
     return counter
 
 def main():
+    
+    ser = serial.Serial("/dev/ttyAMA4", 600)
+    
     try:
         camL = create_camera(0)
         camR = create_camera(1)
     except Exception as e:
         print(f"Error initializing cameras: {e}")
         return
+    
+    time.sleep(1)
+    for i in range(16):
+        ser.write(b'\x00')
 
     # Define parent directory
     parent_dir = os.path.join(os.path.dirname(os.getcwd()), 'captures')
@@ -44,16 +52,21 @@ def main():
     recording = False
     video_writerL = None
     video_writerR = None
+    
+    key = ord('v')
+    
+    start = time.time()
 
     try:
         while True:
+            ser.write(b'\x00')
             frameL = camL.capture_array()
             frameR = camR.capture_array()
 
-            cv2.imshow('Left Camera', frameL)
-            cv2.imshow('Right Camera', frameR)
+            # cv2.imshow('Left Camera', frameL)
+            # cv2.imshow('Right Camera', frameR)
 
-            key = cv2.waitKey(1) & 0xFF
+            # key = cv2.waitKey(1) & 0xFF
             if key == ord('q'):
                 break
             elif key == 13:  # Enter key
@@ -73,12 +86,14 @@ def main():
                         recording = False
                         continue
                     print(f"Started recording video {video_counter}")
+                    key = 0
                 else:
                     recording = False
                     video_writerL.release()
                     video_writerR.release()
                     print(f"Stopped recording video {video_counter}")
                     video_counter += 1
+                    break
 
             if recording:
                 if frameL is not None and frameR is not None:
@@ -90,6 +105,8 @@ def main():
                     video_writerR.write(frameR_bgr)
                 else:
                     print("Error: Frame is None, skipping write")
+            if (time.time() - start >= 5):
+                key = ord('v')
 
     except Exception as e:
         print(f"Error during capture: {e}")
