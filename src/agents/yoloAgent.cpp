@@ -1,17 +1,19 @@
 #include <agents/yoloAgent.hpp>
 
 YoloAgent::YoloAgent(char *tfliteFile, int numClasses, double conf, double iou, CameraAgent *camAgent):
-        running(true), inferencing(false), cameraAgent(camAgent) {
+    running(true), inferencing(false), cameraAgent(camAgent) {
     model = createCoralYolo(tfliteFile, numClasses, conf, iou);
 
     inferencingThread = std::thread(&YoloAgent::inference, this);
+    watchdog = std::thread(&YoloAgent::ensureInference, this);
 }
 
 YoloAgent::~YoloAgent() {
     running = false;
     if (inferencingThread.joinable())
         inferencingThread.join();
-
+    if (watchdog.joinable()) 
+        watchdog.join(); 
     _Exit(0);
 }
 
@@ -60,6 +62,20 @@ void YoloAgent::inference() {
             imageHandle.setImages(images[0], images[1]);
 
             yoloOutput.push(imageHandle);
+
+            m_cond.notify_all();
+        }
+    }
+}
+
+YoloAgent::ensureInference() {
+    std::mutex mutex;
+    std::unique_lock<std::mutex> lock(mutex);
+    while (running) {
+        if (inferencing) {
+            if (!m_cond.wait_for(lock, std::chrono::seconds(5), [this]() { return false; })) {
+                exit(0);
+            }
         }
     }
 }

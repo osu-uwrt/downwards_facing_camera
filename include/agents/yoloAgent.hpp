@@ -2,6 +2,7 @@
 #define YOLOAGENT
 
 #include <thread>
+#include <condition_variable>
 
 #include "agents/cameraAgent.hpp"
 #include "tools/DataUtils.hpp"
@@ -22,12 +23,17 @@ public:
 private:
     bool running, inferencing;
 
+    std::condition_variable m_cond;
+
     std::shared_ptr<CoralYoloItf> model;
     std::thread inferencingThread;
+    std::thread watchdog;
 
     CameraAgent *cameraAgent;
 
     void inference();
+
+    void ensureInference();
 };
 
 #endif
