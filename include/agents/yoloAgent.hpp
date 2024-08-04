@@ -9,11 +9,19 @@
 
 #include "coral_yolo.hpp"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
+#include <unistd.h>
+
 class YoloAgent {
 public:
     TSQueue<YoloDepth> yoloOutput;
 
-    YoloAgent(char *tfliteFile, int numClasses, double conf, double iou, CameraAgent *camAgent);
+    YoloAgent(CameraAgent *camAgent);
     ~YoloAgent();
 
     void startDetecting();
@@ -23,17 +31,18 @@ public:
 private:
     bool running, inferencing;
 
+    int connectionSocket, dataSocket;
+
+    char imageBuffer[320 * 320 * 3 * 2];
+
     std::condition_variable m_cond;
 
     std::shared_ptr<CoralYoloItf> model;
     std::thread inferencingThread;
-    std::thread watchdog;
 
     CameraAgent *cameraAgent;
 
     void inference();
-
-    void ensureInference();
 };
 
 #endif

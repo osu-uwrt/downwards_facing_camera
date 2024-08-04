@@ -18,8 +18,7 @@ public:
         rightIm = right;
     }
 
-    void setLeftDetections(std::vector<Detection> &detOutput) { lDetections = detOutput; }
-    void setRightDetections(std::vector<Detection> &detOutput) { rDetections = detOutput; }
+    void setDetections(std::vector<Detection> &detOutput) { detections_ = detOutput; }
 
     void setTimestamp(timespec ts) { timestamp = ts; }
 
@@ -27,17 +26,14 @@ public:
         left = leftIm;
         right = rightIm;
     }
-
-    void getRightDetections(std::vector<Detection> &detections) { detections = rDetections; }
-
-    void getLeftDetections(std::vector<Detection> &detections) { detections = lDetections; }
+    void getLeftDetections(std::vector<Detection> &detections) { detections = detections_; }
 
     timespec getTimeStamp() { return timestamp; }
 
 private:
     bool depthSet, detectionsSet;
     cv::Mat leftIm, rightIm;
-    std::vector<Detection> lDetections, rDetections;
+    std::vector<Detection> detections_;
     timespec timestamp;
 };
 
