@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     client.waitForAgent();
 
     printf("Client connected\n");
-    std::thread(&runClient, std::ref(client));
+    std::thread newThread = std::thread(&runClient, std::ref(client));
 
     CameraAgent camAgent(std::ref(client));
     YoloAgent yoloAgent("/home/pi/robosub_2024_1_full_integer_quant_edgetpu.tflite", 10, .8, .8, &camAgent);
@@ -35,6 +35,8 @@ int main(int argc, char *argv[]) {
     while (true) {
         usleep(1000);
     }
+
+    newThread.join();
 
     return 0;
 }
