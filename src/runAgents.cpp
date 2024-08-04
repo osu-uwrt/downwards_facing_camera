@@ -5,6 +5,10 @@
 #include <unistd.h>
 #include <net/if.h>
 
+void runClient(MicroROSClient &client) {
+    client.run();
+}
+
 int main(int argc, char *argv[]) {
 
     int ifIdx = if_nametoindex("can0");
@@ -18,7 +22,7 @@ int main(int argc, char *argv[]) {
     client.waitForAgent();
 
     printf("Client connected\n");
-    client.run();
+    std::thread(&runClient, std::ref(client));
 
     CameraAgent camAgent(std::ref(client));
     YoloAgent yoloAgent("/home/pi/robosub_2024_1_full_integer_quant_edgetpu.tflite", 10, .8, .8, &camAgent);
