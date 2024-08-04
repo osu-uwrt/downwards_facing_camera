@@ -19,6 +19,7 @@ add_executable(arucoCal calibration_scripts/arucoCalibration.cpp calibration_scr
 add_executable(arucoSterCal calibration_scripts/arucoStereoCalibration.cpp calibration_scripts/pointGenerator.cpp tools/mySerial.cpp tools/CanmoreImageTransmitter.cpp)
 add_executable(takeSterImage tools/takeStereoIm.cpp tools/mySerial.cpp)
 add_executable(runAgents src/runAgents.cpp tools/mySerial.cpp)
+add_executable(yoloInterpreter src/yoloInterpreter.cpp)
 
 add_library(agentLib src/agents/cameraAgent.cpp src/agents/orientationAgent.cpp src/agents/yoloAgent.cpp tools/mySerial.cpp tools/DFCMicroROSClient.cpp)
 target_link_directories(agentLib PUBLIC libcoral_bindings/out/)
@@ -47,3 +48,6 @@ target_link_libraries(arucoSterCal -llccv ${OpenCV_LIBS} ${JPEG_LIBRARIES} canmo
 target_link_libraries(takeSterImage -llccv ${OpenCV_LIBS})
 
 target_link_libraries(runAgents agentLib micro_ros)
+
+target_link_directories(yoloInterpreter PUBLIC libcoral_bindings/out/)
+target_link_libraries(yoloInterpreter -lcoral_yolo)

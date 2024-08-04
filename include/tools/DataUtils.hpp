@@ -26,7 +26,7 @@ public:
         left = leftIm;
         right = rightIm;
     }
-    void getLeftDetections(std::vector<Detection> &detections) { detections = detections_; }
+    void getDetections(std::vector<Detection> &detections) { detections = detections_; }
 
     timespec getTimeStamp() { return timestamp; }
 

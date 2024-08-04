@@ -72,18 +72,17 @@ void OrientationAgent::produce() {
                 } catch (std::runtime_error &e) {
                     continue;
                 }
-                std::vector<Detection> lDetections, rDetections;
-                inputs.getLeftDetections(lDetections);
-                inputs.getRightDetections(rDetections);
+                std::vector<Detection> detections;
+                inputs.getDetections(detections);
 
-                printf("Total detections: %d\n", lDetections.size(), rDetections.size());
+                printf("Total detections: %d\n", detections.size());
 
                 std::vector<CameraDetection> detectionMsg;
 
                 cv::Mat left, right;
                 inputs.getImages(left, right);
 
-                for (Detection detection : lDetections) {
+                for (Detection detection : detections) {
                     std::vector<cv::Point2f> corners;
 
                     corners.push_back(cv::Point2f(detection.bbox[0] * 320 - detection.bbox[2] / 160,
@@ -99,31 +98,7 @@ void OrientationAgent::produce() {
                     CameraDetection camDet;
 
                     camDet.score = detection.conf;
-                    camDet.classId = detection.classId;
-
-                    camDet.pose.pose.position.x = undistorted[0].x;
-                    camDet.pose.pose.position.y = undistorted[0].y;
-                    camDet.pose.pose.position.z = 1;
-
-                    detectionMsg.push_back(camDet);
-                }
-
-                for (Detection detection : rDetections) {
-                    std::vector<cv::Point2f> corners;
-
-                    corners.push_back(cv::Point2f(detection.bbox[0] * 320 - detection.bbox[2] / 160,
-                                               detection.bbox[1] * 320 - detection.bbox[3] / 160));
-
-                    std::vector<cv::Point2f> undistorted(corners.size());
-
-                    cv::undistortPoints(corners, undistorted, rCamMat, rCamDist);
-                    cv::Mat mask(80, 80, CV_8U, detection.mask);
-                    cv::Mat red = redMask(right, mask);
-
-                    CameraDetection camDet;
-
-                    camDet.score = detection.conf;
-                    camDet.classId = detection.classId + 20;
+                    camDet.classId = std::to_string(detection.classId);
 
                     camDet.pose.pose.position.x = undistorted[0].x;
                     camDet.pose.pose.position.y = undistorted[0].y;

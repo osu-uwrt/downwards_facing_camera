@@ -6,6 +6,9 @@ void write_gaurentee(int fd, const void* buf, size_t buf_size) {
 
     while (bufptr < bufchar + buf_size) {
         size_t remaining = buf_size - (bufptr - bufchar);
+	if (remaining > 2048) {
+	    remaining = 2048;
+	}
         int ret = write(fd, bufptr, remaining);
         if (ret == 0) {
             fprintf(stderr, "Socket Closed\n");
@@ -32,6 +35,7 @@ void read_gaurentee(int fd, void* buf_out, size_t buf_size) {
         }
         else if (ret < 0) {
             perror("read");
+	    printf("Timed out\n");
             exit(EXIT_FAILURE);
         }
         bufptr += ret;
@@ -39,6 +43,7 @@ void read_gaurentee(int fd, void* buf_out, size_t buf_size) {
 }
 
 YoloAgent::YoloAgent(CameraAgent *camAgent): running(true), inferencing(false), cameraAgent(camAgent) {
+    system("rm /tmp/buffer");
     connectionSocket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
     if (connectionSocket == -1) {
         perror("socket");
@@ -83,10 +88,14 @@ YoloAgent::YoloAgent(CameraAgent *camAgent): running(true), inferencing(false), 
         exit(EXIT_FAILURE);
     }
 
+    printf("Accepted\n");
+
     struct timeval tv;
     tv.tv_sec = 2;
+    tv.tv_usec = 0;
 
-    setsockopt(dataSocket, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
+    ret = setsockopt(dataSocket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(timeval));
+    printf("Return of sockopt: %d\n", ret);
 
     inferencingThread = std::thread(&YoloAgent::inference, this);
 }
@@ -95,8 +104,6 @@ YoloAgent::~YoloAgent() {
     running = false;
     if (inferencingThread.joinable())
         inferencingThread.join();
-    if (watchdog.joinable())
-        watchdog.join();
     _Exit(0);
 }
 
@@ -127,12 +134,16 @@ void YoloAgent::inference() {
             cv::resize(images[1], images[1], cv::Size(320, 180));
             cv::copyMakeBorder(images[1], images[1], 70, 70, 0, 0, cv::BORDER_DEFAULT, cv::Scalar(0, 0, 0));
 
+	    printf("Sending image 1\n");
             write_gaurentee(dataSocket, images[0].data, 320 * 320 * 3);
-            write_gaurentee(dataSocket, images[1].data, 320 * 320 * 3);
+            printf("Sending image 2\n");
+	    write_gaurentee(dataSocket, images[1].data, 320 * 320 * 3);
             int detSize = 0;
 
+	    printf("Waiting for response\n");
             read_gaurentee(dataSocket, &detSize, sizeof(int));
 
+	    printf("Got response\n");
             std::vector<Detection> detections(detSize);
 
             for (int i = 0; i < detSize; i++) {
@@ -150,8 +161,6 @@ void YoloAgent::inference() {
             imageHandle.setImages(images[0], images[1]);
 
             yoloOutput.push(imageHandle);
-
-            m_cond.notify_all();
         }
     }
 }

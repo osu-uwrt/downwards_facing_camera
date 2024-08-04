@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
     std::thread newThread = std::thread(&runClient, std::ref(client));
 
     CameraAgent camAgent(std::ref(client));
-    YoloAgent yoloAgent("/home/pi/robosub_2024_1_full_integer_quant_edgetpu.tflite", 10, .8, .8, &camAgent);
+    YoloAgent yoloAgent(&camAgent);
     OrientationAgent orientationAgent(std::ref(client), &yoloAgent);
 
     camAgent.startCapturing();

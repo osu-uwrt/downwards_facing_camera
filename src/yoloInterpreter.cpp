@@ -7,6 +7,8 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#include <string>
+
 void write_gaurentee(int fd, const void* buf, size_t buf_size) {
     const unsigned char* bufchar = (unsigned char*) buf;
     const unsigned char* bufptr = bufchar;
@@ -47,7 +49,7 @@ void read_gaurentee(int fd, void* buf_out, size_t buf_size) {
 
 int main(int argc, char *argv[]) {
     // Create Coral
-    auto model = createCoralYolo("/home/pi/robosub_2024_1_full_integer_quant_edgetpu.tflite", 4, 0.9, 0.9);
+    auto model = createCoralYolo("/home/pi/robosub_2024_5_full_integer_quant_edgetpu.tflite", 4, 0.8, 0.9);
 
     struct sockaddr_un addr;
 
@@ -70,6 +72,8 @@ int main(int argc, char *argv[]) {
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, "/tmp/buffer", sizeof(addr.sun_path) - 1);
 
+    usleep(3000);
+
     int ret = connect(data_socket, (const struct sockaddr *) &addr, sizeof(addr));
     if (ret == -1) {
         fprintf(stderr, "The server is down.\n");
@@ -84,6 +88,7 @@ int main(int argc, char *argv[]) {
 
         printf("Read image\n");
 
+	usleep(20000);
         std::vector<Detection> lDetections, rDetections;
 
         model->preprocessImage((uint8_t *) buffer);
@@ -92,6 +97,8 @@ int main(int argc, char *argv[]) {
         printf("Ran detection left\n");
 
         lDetections = model->processDetections();
+
+	usleep(20000);
 
         model->preprocessImage((uint8_t *) (buffer + 320 * 320 * 3));
         model->detectImage();

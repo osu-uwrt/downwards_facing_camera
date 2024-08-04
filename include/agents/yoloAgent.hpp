@@ -35,8 +35,6 @@ private:
 
     char imageBuffer[320 * 320 * 3 * 2];
 
-    std::condition_variable m_cond;
-
     std::shared_ptr<CoralYoloItf> model;
     std::thread inferencingThread;
 
