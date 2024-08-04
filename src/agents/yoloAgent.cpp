@@ -68,7 +68,7 @@ void YoloAgent::inference() {
     }
 }
 
-YoloAgent::ensureInference() {
+void YoloAgent::ensureInference() {
     std::mutex mutex;
     std::unique_lock<std::mutex> lock(mutex);
     while (running) {

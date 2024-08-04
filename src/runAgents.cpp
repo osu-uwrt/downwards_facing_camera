@@ -7,15 +7,17 @@
 
 int main(int argc, char *argv[]) {
 
-    int ifIdx = if_nametoindex("talos");
+    int ifIdx = if_nametoindex("can0");
     if (!ifIdx) {
         throw std::system_error(errno, std::generic_category(), "if_nametoindex");
     }
 
     MicroROSClient &client = MicroROSClient::create(ifIdx, CANMORE_CLIENT_ID_DOWNWARDS_CAMERA, "talos");
 
+    printf("Waiting for agent (client id %d)\n", CANMORE_CLIENT_ID_DOWNWARDS_CAMERA);
     client.waitForAgent();
 
+    printf("Client connected\n");
     client.run();
 
     CameraAgent camAgent(std::ref(client));
