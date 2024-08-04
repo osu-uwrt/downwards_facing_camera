@@ -82,6 +82,8 @@ int main(int argc, char *argv[]) {
     while (true) {
         read_gaurentee(data_socket, buffer, readSize);
 
+        printf("Read image\n");
+
         std::vector<Detection> lDetections, rDetections;
 
         model->preprocessImage((uint8_t *) buffer);
@@ -119,5 +121,7 @@ int main(int argc, char *argv[]) {
             write_gaurentee(data_socket, &detection.conf, sizeof(detection.conf));
             write_gaurentee(data_socket, detection.mask, sizeof(detection.mask));
         }
+
+        printf("Sent detections\n");
     }
 }
