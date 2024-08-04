@@ -49,10 +49,10 @@ void MicroROSClient::run() {
     RCCHECK(rclc_node_init_default(&node_, "downwards_facing_camera", rosNamespace_.c_str(), &support_));
 
     // create detections publisher and populate the frame id
-    cameraFrame_ = rosNamespace_ + "/downwards_facing_camera/left_optical";
+    cameraFrame_ = rosNamespace_ + "/downwards_camera/left_optical";
     RCCHECK(rclc_publisher_init_default(&detectedObjsPub_, &node_,
                                         ROSIDL_GET_MSG_TYPE_SUPPORT(vision_msgs, msg, Detection3DArray),
-                                        "detected_objects"));
+                                        "dfc_objects"));
 
     RCCHECK(rclc_service_init_default(&detectionRequestSrv_, &node_,
                                       ROSIDL_GET_SRV_TYPE_SUPPORT(std_srvs, srv, SetBool), "downwards_camera/mode"));

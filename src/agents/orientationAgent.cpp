@@ -123,7 +123,7 @@ void OrientationAgent::produce() {
                     CameraDetection camDet;
 
                     camDet.score = detection.conf;
-                    camDet.classId = detection.classId;
+                    camDet.classId = detection.classId + 20;
 
                     camDet.pose.pose.position.x = undistorted[0].x;
                     camDet.pose.pose.position.y = undistorted[0].y;
