@@ -88,7 +88,7 @@ void OrientationAgent::produce() {
                 camDet.classId = std::to_string(detection.classId);
                 std::vector<cv::Point2f> corners;
                 printf("Id: %d\n", detection.classId);
-                if (detection.classId != binId) {
+                if (detection.classId != binId || detection.classId != binId + 20) {
                     cv::Mat usedIm = left;
                     cv::Mat usedMat = lCamMat;
                     cv::Mat usedDist = lCamDist;
