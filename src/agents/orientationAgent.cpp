@@ -28,7 +28,6 @@ cv::Mat blueMask(cv::Mat image, cv::Mat mask) {
 }
 
 OrientationAgent::OrientationAgent(MicroROSClient &client, YoloAgent *yoAgent): client_(client), yoloAgent(yoAgent) {
-
     cv::FileStorage cam0Intr("/home/pi/Cam0Intr.xml", cv::FileStorage::READ);
     cam0Intr["Matrix"] >> lCamMat;
     cam0Intr["DistCoeffs"] >> lCamDist;
@@ -65,50 +64,86 @@ void OrientationAgent::produce() {
     while (running) {
         if (producing) {
             // if (client_.getDetectionsEnabled(targetTask)) {
-                // yoloAgent->setTask(targetTask);
-                YoloDepth inputs;
-                try {
-                    inputs = yoloAgent->yoloOutput.pop();
-                } catch (std::runtime_error &e) {
-                    continue;
+            // yoloAgent->setTask(targetTask);
+            YoloDepth inputs;
+            try {
+                inputs = yoloAgent->yoloOutput.pop();
+            } catch (std::runtime_error &e) {
+                continue;
+            }
+            std::vector<Detection> detections;
+            inputs.getDetections(detections);
+
+            printf("Total detections: %d\n", detections.size());
+
+            std::vector<CameraDetection> detectionMsg;
+
+            cv::Mat left, right;
+            inputs.getImages(left, right);
+
+            for (Detection detection : detections) {
+                CameraDetection camDet;
+
+                camDet.score = detection.conf;
+                camDet.classId = std::to_string(detection.classId);
+                std::vector<cv::Point2f> corners;
+                printf("Id: %d\n", detection.classId);
+                if (detection.classId != binId) {
+                    cv::Mat usedIm = left;
+                    cv::Mat usedMat = lCamMat;
+                    cv::Mat usedDist = lCamDist;
+                    if (detection.classId > 20) {
+                        usedIm = right;
+                        usedMat = rCamMat;
+                        usedDist = rCamDist;
+                    }
+
+                    cv::Mat mask(80, 80, CV_8U, detection.mask);
+                    cv::Mat red = redMask(usedIm, mask);
+
+                    cv::goodFeaturesToTrack(
+                        usedIm(cv::Rect((int) (detection.bbox[0] * 320 - detection.bbox[2] / 160),
+                                        (int) (detection.bbox[1] * 320 - detection.bbox[3] / 160),
+                                        (int) detection.bbox[2] * 320, (int) detection.bbox[3] * 320)),
+                        corners, 0, 0.02, 40);
+
+                    std::vector<cv::Point2f> goodCorners;
+
+                    for (cv::Point2f corner : corners) {
+                        if (red.at<float>((int) (corner.x + detection.bbox[0] * 320 - detection.bbox[2] / 160),
+                                          corner.y + (detection.bbox[1] * 320 - detection.bbox[3] / 160))) {
+                            goodCorners.push_back(corner +
+                                                  cv::Point2f((detection.bbox[0] * 320 - detection.bbox[2] / 160),
+                                                              (detection.bbox[1] * 320 - detection.bbox[3] / 160)))
+                        }
+                    }
+
+                    std::vector<cv::Point2f> undistored(goodCorners.size());
+                    cv::undistortPoints(goodCorners, undistored, usedMat, usedDist);
+
+                    cv::Mat meanMat;
+                    cv::reduce(undistored, meanMat, 01, cv::REDUCE_AVG);
+
+                    camDet.pose.pose.position.x = meanMat.at<float>(0);
+                    camDet.pose.pose.position.y = meanMat.at<float>(1);
                 }
-                std::vector<Detection> detections;
-                inputs.getDetections(detections);
-
-                printf("Total detections: %d\n", detections.size());
-
-                std::vector<CameraDetection> detectionMsg;
-
-                cv::Mat left, right;
-                inputs.getImages(left, right);
-
-                for (Detection detection : detections) {
-                    std::vector<cv::Point2f> corners;
-
+                else {
                     corners.push_back(cv::Point2f(detection.bbox[0] * 320 - detection.bbox[2] / 160,
-                                               detection.bbox[1] * 320 - detection.bbox[3] / 160));
+                                                  detection.bbox[1] * 320 - detection.bbox[3] / 160));
 
                     std::vector<cv::Point2f> undistorted(corners.size());
 
                     cv::undistortPoints(corners, undistorted, lCamMat, lCamDist);
-                    cv::Mat mask(80, 80, CV_8U, detection.mask);
-                    printf("Id: %d\n", detection.classId);
-                    cv::Mat red = redMask(left, mask);
-
-                    CameraDetection camDet;
-
-                    camDet.score = detection.conf;
-                    camDet.classId = std::to_string(detection.classId);
 
                     camDet.pose.pose.position.x = undistorted[0].x;
                     camDet.pose.pose.position.y = undistorted[0].y;
-                    camDet.pose.pose.position.z = 1;
-
-                    detectionMsg.push_back(camDet);
                 }
+                camDet.pose.pose.position.z = 1;
 
-                client_.reportDetections(inputs.getTimeStamp(), detectionMsg);
-            // }
+                detectionMsg.push_back(camDet);
+            }
+
+            client_.reportDetections(inputs.getTimeStamp(), detectionMsg);
         }
     }
 }

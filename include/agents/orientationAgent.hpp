@@ -21,6 +21,8 @@ private:
     bool producing, running;
     int ifIdx;
 
+    int binId = 5;
+
     cv::Mat lCamMat, lCamDist, rCamMat, rCamDist;
 
     MicroROSClient &client_;
