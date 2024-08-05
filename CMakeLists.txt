@@ -27,12 +27,13 @@ target_link_libraries(agentLib -llccv ${OpenCV_LIBS} -lcoral_yolo canmore_cpp)
 
 add_custom_target(calibration DEPENDS arucoCal arucoSterCal)
 add_custom_target(tools DEPENDS takeSterImage)
-add_custom_target(agents DEPENDS runAgents)
+add_custom_target(agents DEPENDS runAgents yoloInterpreter)
 
 set_target_properties(arucoCal PROPERTIES EXCLUDE_FROM_ALL TRUE)
 set_target_properties(arucoSterCal PROPERTIES EXCLUDE_FROM_ALL TRUE)
 set_target_properties(takeSterImage PROPERTIES EXCLUDE_FROM_ALL TRUE)
 set_target_properties(runAgents PROPERTIES EXCLUDE_FROM_ALL TRUE)
+set_target_properties(yoloInterpreter PROPERTIES EXCLUDE_FROM_ALL TRUE)
 set_target_properties(agentLib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 # target_link_directories(runCameras PUBLIC libcoral_bindings/out/)
@@ -50,4 +51,4 @@ target_link_libraries(takeSterImage -llccv ${OpenCV_LIBS})
 target_link_libraries(runAgents agentLib micro_ros)
 
 target_link_directories(yoloInterpreter PUBLIC libcoral_bindings/out/)
-target_link_libraries(yoloInterpreter -lcoral_yolo)
+target_link_libraries(yoloInterpreter -lcoral_yolo ${OpenCV_LIBS})

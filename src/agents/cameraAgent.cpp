@@ -56,6 +56,7 @@ void CameraAgent::captureImages() {
                 printf("Failed to grab frame\n");
                 continue;
             }
+            
             YoloDepth imageHandle;
             imageHandle.setImages(images[0], images[1]);
             imageHandle.setTimestamp(ts);

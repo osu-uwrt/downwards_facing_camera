@@ -1,14 +1,14 @@
 #include <agents/yoloAgent.hpp>
 
-void write_gaurentee(int fd, const void* buf, size_t buf_size) {
-    const unsigned char* bufchar = (unsigned char*) buf;
-    const unsigned char* bufptr = bufchar;
+void write_gaurentee(int fd, const void *buf, size_t buf_size) {
+    const unsigned char *bufchar = (unsigned char *) buf;
+    const unsigned char *bufptr = bufchar;
 
     while (bufptr < bufchar + buf_size) {
         size_t remaining = buf_size - (bufptr - bufchar);
-	if (remaining > 2048) {
-	    remaining = 2048;
-	}
+        if (remaining > 2048) {
+            remaining = 2048;
+        }
         int ret = write(fd, bufptr, remaining);
         if (ret == 0) {
             fprintf(stderr, "Socket Closed\n");
@@ -22,9 +22,9 @@ void write_gaurentee(int fd, const void* buf, size_t buf_size) {
     }
 }
 
-void read_gaurentee(int fd, void* buf_out, size_t buf_size) {
-    unsigned char* bufchar = (unsigned char*) buf_out;
-    unsigned char* bufptr = bufchar;
+void read_gaurentee(int fd, void *buf_out, size_t buf_size) {
+    unsigned char *bufchar = (unsigned char *) buf_out;
+    unsigned char *bufptr = bufchar;
 
     while (bufptr < bufchar + buf_size) {
         size_t remaining = buf_size - (bufptr - bufchar);
@@ -35,7 +35,7 @@ void read_gaurentee(int fd, void* buf_out, size_t buf_size) {
         }
         else if (ret < 0) {
             perror("read");
-	    printf("Timed out\n");
+            printf("Timed out\n");
             exit(EXIT_FAILURE);
         }
         bufptr += ret;
@@ -129,33 +129,33 @@ void YoloAgent::inference() {
             imageHandle.getImages(images[0], images[1]);
 
             cv::resize(images[0], images[0], cv::Size(320, 180));
-            cv::copyMakeBorder(images[0], images[0], 70, 70, 0, 0, cv::BORDER_DEFAULT, cv::Scalar(0, 0, 0));
+            cv::copyMakeBorder(images[0], images[0], 70, 70, 0, 0, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
 
             cv::resize(images[1], images[1], cv::Size(320, 180));
-            cv::copyMakeBorder(images[1], images[1], 70, 70, 0, 0, cv::BORDER_DEFAULT, cv::Scalar(0, 0, 0));
+            cv::copyMakeBorder(images[1], images[1], 70, 70, 0, 0, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
 
-	    printf("Sending image 1\n");
-            write_gaurentee(dataSocket, images[0].data, 320 * 320 * 3);
+            printf("Sending image 1\n");
+            write_gaurentee(dataSocket, images[0].data, size_t(320 * 320 * 3));
             printf("Sending image 2\n");
-	    write_gaurentee(dataSocket, images[1].data, 320 * 320 * 3);
+            write_gaurentee(dataSocket, images[1].data, size_t(320 * 320 * 3));
             int detSize = 0;
 
-	    printf("Waiting for response\n");
+            printf("Waiting for response\n");
             read_gaurentee(dataSocket, &detSize, sizeof(int));
 
-	    printf("Got response\n");
+            printf("Got response\n");
             std::vector<Detection> detections(detSize);
 
             for (int i = 0; i < detSize; i++) {
                 Detection detection;
-                read_gaurentee(dataSocket, detection.bbox, sizeof(detection.bbox));
+                read_gaurentee(dataSocket, detection.bbox, 4 * sizeof(float));
                 read_gaurentee(dataSocket, &detection.classId, sizeof(detection.classId));
+                printf("%d: bbox: %f, %f, %f, %f\n", detection.classId, detection.bbox[0], detection.bbox[1], detection.bbox[2], detection.bbox[3]);
                 read_gaurentee(dataSocket, &detection.conf, sizeof(detection.conf));
-                read_gaurentee(dataSocket, detection.mask, sizeof(detection.mask));
+                read_gaurentee(dataSocket, detection.mask, 80 * 80 * sizeof(bool));
 
-                detections.push_back(detection);
+                detections[i] = detection;
             }
-
             imageHandle.setDetections(detections);
 
             imageHandle.setImages(images[0], images[1]);
