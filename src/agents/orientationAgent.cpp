@@ -151,6 +151,7 @@ void OrientationAgent::produce() {
                     camDet.pose.pose.position.y = meanMat.at<float>(1);
                 }
                 else {
+		    continue;
                     // printf("pushing center of bbox\n");
                     corners.push_back(cv::Point2f(detection.bbox[0] * 320 - detection.bbox[2] / 160,
                                                   detection.bbox[1] * 320 - detection.bbox[3] / 160));

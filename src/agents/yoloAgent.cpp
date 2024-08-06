@@ -144,7 +144,7 @@ void YoloAgent::inference() {
             read_gaurentee(dataSocket, &detSize, sizeof(int));
 
             printf("Got response\n");
-            std::vector<Detection> detections(detSize);
+            std::vector<Detection> detections;
 
             for (int i = 0; i < detSize; i++) {
                 Detection detection;
@@ -154,7 +154,7 @@ void YoloAgent::inference() {
                 read_gaurentee(dataSocket, &detection.conf, sizeof(detection.conf));
                 read_gaurentee(dataSocket, detection.mask, 80 * 80 * sizeof(bool));
 
-                detections[i] = detection;
+                detections.push_back(detection);
             }
             imageHandle.setDetections(detections);
 

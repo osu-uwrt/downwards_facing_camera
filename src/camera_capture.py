@@ -105,7 +105,7 @@ def main():
                     video_writerR.write(frameR_bgr)
                 else:
                     print("Error: Frame is None, skipping write")
-            if (time.time() - start >= 5):
+            if (time.time() - start >= 20):
                 key = ord('v')
 
     except Exception as e:

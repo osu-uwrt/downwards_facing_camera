@@ -50,7 +50,7 @@ void read_gaurentee(int fd, void *buf_out, size_t buf_size) {
 
 int main(int argc, char *argv[]) {
     // Create Coral
-    auto model = createCoralYolo("/home/pi/robosub_2024_5_full_integer_quant_edgetpu.tflite", 5, 0.8, 0.9);
+    auto model = createCoralYolo("/home/pi/robosub_2024_5_full_integer_quant_edgetpu.tflite", 5, 0.5, 0.9);
 
     struct sockaddr_un addr;
 
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
         // cv::Mat lImage(320, 320, CV_8UC3, buffer);
         // cv::imwrite("test.jpg", lImage);
 
-        //usleep(20000);
+        usleep(20000);
         std::vector<Detection> lDetections, rDetections;
 
         model->preprocessImage((uint8_t *) buffer);
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
 
         lDetections = model->processDetections();
 
-        //usleep(20000);
+        usleep(20000);
 
         model->preprocessImage((uint8_t *) (buffer + 320 * 320 * 3));
         model->detectImage();

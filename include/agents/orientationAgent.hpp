@@ -21,7 +21,7 @@ private:
     bool producing, running;
     int ifIdx;
 
-    int binId = 1;
+    int binId = 2;
 
     cv::Mat lCamMat, lCamDist, rCamMat, rCamDist;
 
