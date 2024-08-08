@@ -11,24 +11,15 @@ cv::Mat redMask(cv::Mat image, cv::Mat mask) {
     cv::cvtColor(image, hsv, cv::COLOR_RGB2HSV);
     cv::inRange(hsv, cv::Scalar(0, 0, 0), cv::Scalar(10, 255, 255), lower);
     cv::inRange(hsv, cv::Scalar(160, 0, 0), cv::Scalar(180, 255, 255), upper);
-    printf("upper size: %d, %d\n", upper.size().width, upper.size().height);
-    printf("lower size: %d, %d\n", lower.size().width, lower.size().height);
+    // printf("upper size: %d, %d\n", upper.size().width, upper.size().height);
+    // printf("lower size: %d, %d\n", lower.size().width, lower.size().height);
     cv::bitwise_or(upper, lower, newMask);
-    printf("Did or\n");
+    // printf("Did or\n");
     cv::resize(mask, mask, cv::Size(320, 320), cv::INTER_LINEAR);
-    printf("Did resize\n");
+    // printf("Did resize\n");
     cv::bitwise_and(newMask, mask, newMask);
-    printf("Did and\n");
+    // printf("Did and\n");
     // printf("%d\n", newMask.type());
-    return newMask;
-}
-
-cv::Mat blueMask(cv::Mat image, cv::Mat mask) {
-    cv::Mat hsv, newMask;
-    cv::cvtColor(image, hsv, cv::COLOR_RGB2HSV);
-    cv::inRange(hsv, cv::Scalar(90, 0, 0), cv::Scalar(120, 255, 255), newMask);
-    cv::resize(mask, mask, cv::Size(320, 320), cv::INTER_LINEAR);
-    cv::bitwise_and(newMask, mask, newMask);
     return newMask;
 }
 
@@ -89,6 +80,10 @@ void OrientationAgent::produce() {
             for (Detection detection : detections) {
                 CameraDetection camDet;
 
+                cv::Rect bbox((int) (detection.bbox[0] * 320 - detection.bbox[2] * 160),
+                              (int) (detection.bbox[1] * 320 - detection.bbox[3] * 160),
+                              (int) (detection.bbox[2] * 320), (int) (detection.bbox[3] * 320));
+
                 camDet.score = detection.conf;
                 camDet.classId = std::to_string(detection.classId);
                 std::vector<cv::Point2f> corners;
@@ -104,54 +99,38 @@ void OrientationAgent::produce() {
                     }
 
                     cv::Mat mask(80, 80, CV_8U, detection.mask);
-                    cv::Mat red = redMask(usedIm, mask);
+                    cv::Mat red = redMask(usedIm(bbox), mask(bbox));
 
-                    cv::imwrite("mask.png", red * 255);
+                    std::vector<std::vector<cv::Point>> contours;
+                    cv::findContours(red, contours, cv::RETR_LIST, cv::CHAIN_APPROX_NONE, cv::Point(bbox.x, bbox.y));
 
-                    // printf("Doing tracking\n");
-
-                    printf("%d, %d, %d, %d\n", (int) (detection.bbox[0] * 320 - detection.bbox[2] * 160),
-                           (int) (detection.bbox[1] * 320 - detection.bbox[3] * 160), (int) (detection.bbox[2] * 320),
-                           (int) (detection.bbox[3] * 320));
-
-                    cv::Mat bboxedImage =
-                        usedIm(cv::Rect((int) (detection.bbox[0] * 320 - detection.bbox[2] * 160),
-                                        (int) (detection.bbox[1] * 320 - detection.bbox[3] * 160),
-                                        (int) (detection.bbox[2] * 320), (int) (detection.bbox[3] * 320)));
-
-                    cv::Mat dist;
-                    cv::cvtColor(bboxedImage, dist, cv::COLOR_RGB2GRAY);
-                    cv::goodFeaturesToTrack(dist, corners, 0, 0.02, 40);
-
-                    std::vector<cv::Point2f> goodCorners;
-
-                    for (cv::Point2f corner : corners) {
-                        if (red.at<float>((int) (corner.x + detection.bbox[0] * 320 - detection.bbox[2] * 160),
-                                          corner.y + (detection.bbox[1] * 320 - detection.bbox[3] * 160))) {
-                            goodCorners.push_back(corner +
-                                                  cv::Point2f((detection.bbox[0] * 320 - detection.bbox[2] * 160),
-                                                              (detection.bbox[1] * 320 - detection.bbox[3] * 160)));
+                    if (contours.size() > 0) {
+                        int maxIndex = 0;
+                        int maxArea = -1;
+                        for (int i = 0; i < contours.size(); i++) {
+                            double newArea = cv::contourArea(contours[i]);
+                            if (newArea > maxArea) {
+                                maxArea = newArea;
+                                maxIndex = i;
+                            }
                         }
-                    }
 
-                    if (goodCorners.size() < 1) {
+                        cv::Moments moments;
+                        moments = cv::moments(contours[maxIndex]);
+                        corners.push_back(cv::Point2f(moments.m10 / moments.m00, moments.m01 / moments.m00));
+
+                        std::vector<cv::Point2f> ray;
+                        cv::undistortPoints(corners, ray, usedMat, usedDist);
+
+                        camDet.pose.pose.position.x = ray[0].x;
+                        camDet.pose.pose.position.x = ray[0].y;
+                    }
+                    else {
                         continue;
                     }
-
-                    printf("undistorting points size: %d\n", goodCorners.size());
-
-                    std::vector<cv::Point2f> undistored(goodCorners.size());
-                    cv::undistortPoints(goodCorners, undistored, usedMat, usedDist);
-
-                    cv::Mat meanMat;
-                    cv::reduce(undistored, meanMat, 01, cv::REDUCE_AVG);
-                    printf("reducing\n");
-
-                    camDet.pose.pose.position.x = meanMat.at<float>(0);
-                    camDet.pose.pose.position.y = meanMat.at<float>(1);
                 }
                 else {
-		    continue;
+                    continue;  // IF WE DO TABLE, THIS MIGHT WORK
                     // printf("pushing center of bbox\n");
                     corners.push_back(cv::Point2f(detection.bbox[0] * 320 - detection.bbox[2] / 160,
                                                   detection.bbox[1] * 320 - detection.bbox[3] / 160));

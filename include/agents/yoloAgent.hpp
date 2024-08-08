@@ -27,6 +27,9 @@ public:
     void startDetecting();
     void stopDetecting();
 
+    void restartPID();
+    void restartConnection();
+
     void setTask(int task);
 private:
     bool running, inferencing;
@@ -39,6 +42,8 @@ private:
     std::thread inferencingThread;
 
     CameraAgent *cameraAgent;
+
+    pid_t yolo = 0;
 
     void inference();
 };
